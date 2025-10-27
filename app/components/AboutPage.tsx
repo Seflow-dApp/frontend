@@ -105,10 +105,9 @@ export default function AboutPage() {
             </h2>
             <p className="text-lg text-gray-700 max-w-2xl mx-auto leading-relaxed">
               <span data-editor-id="app/components/AboutPage.tsx:96:14">
-                To democratize wealth building for young Indonesian professionals by making
-                sophisticated financial strategies accessible, automated, and stress-free. We
-                believe everyone deserves to grow their wealth without needing to become a financial
-                expert.
+                To democratize wealth building for young professionals by making sophisticated
+                financial strategies accessible, automated, and stress-free. We believe everyone
+                deserves to grow their wealth without needing to become a financial expert.
               </span>
             </p>
           </div>
@@ -153,7 +152,7 @@ export default function AboutPage() {
             </h2>
             <p className="text-lg text-gray-600 max-w-2xl mx-auto">
               <span data-editor-id="app/components/AboutPage.tsx:135:14">
-                Built specifically for the Indonesian market with features that matter to young
+                Built specifically for the global market with features that matter to young
                 professionals
               </span>
             </p>
@@ -203,8 +202,8 @@ export default function AboutPage() {
           </h2>
           <p className="text-lg text-gray-600 mb-8 max-w-2xl mx-auto">
             <span data-editor-id="app/components/AboutPage.tsx:212:12">
-              Join thousands of Indonesian professionals who are already building wealth
-              automatically with Seflow.
+              Join thousands of professionals who are already building wealth automatically with
+              Seflow.
             </span>
           </p>
 

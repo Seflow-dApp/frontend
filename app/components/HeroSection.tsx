@@ -221,7 +221,7 @@ export default function HeroSection({ onGetStarted }: HeroSectionProps) {
                 Trusted by Thousands
               </h2>
               <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-                Join the growing community of Indonesian professionals building wealth automatically
+                Join the growing community of professionals building wealth automatically
               </p>
             </div>
 
@@ -259,8 +259,7 @@ export default function HeroSection({ onGetStarted }: HeroSectionProps) {
                 Why Choose Seflow?
               </h2>
               <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-                Built specifically for young Indonesian professionals who want to grow wealth
-                effortlessly
+                Built specifically for young professionals who want to grow wealth effortlessly
               </p>
             </div>
 

@@ -15,7 +15,7 @@ export default function Footer() {
               <span className="text-xl font-bold">Seflow</span>
             </div>
             <p className="text-gray-400 text-sm">
-              Auto-grow your salary through smart DeFi splitting for Indonesian professionals.
+              Auto-grow your salary through smart DeFi splitting for professionals worldwide.
             </p>
             <div className="flex space-x-4">
               <a
@@ -131,7 +131,13 @@ export default function Footer() {
         <div className="border-t border-gray-800 mt-8 pt-8 flex flex-col sm:flex-row justify-between items-center">
           <p className="text-sm text-gray-400">© 2025 Seflow. All rights reserved.</p>
           <div className="flex items-center space-x-4 mt-4 sm:mt-0">
-            <span className="text-xs text-gray-500">Made with ❤️ for Indonesian professionals</span>
+            <span className="text-xs text-gray-500">
+              Made with ❤️ by{" "}
+              <a href="https://ramadhvni.com/" target="_blank" rel="noopener noreferrer">
+                Rama
+              </a>
+              .
+            </span>
           </div>
         </div>
       </div>

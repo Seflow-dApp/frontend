@@ -9,8 +9,7 @@ const primaryFont = Inter({
 
 export const metadata = {
   title: "Seflow - Auto-Grow Your Salary",
-  description:
-    "Split, Save, Earn Yields in 2 Minutes - Web3 budgeting for Indonesian professionals",
+  description: "Split, Save, Earn Yields in 2 Minutes - Web3 budgeting for professionals",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

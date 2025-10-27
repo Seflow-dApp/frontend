@@ -187,9 +187,9 @@ export default function SplitPage({
           className="bg-white rounded-2xl shadow-lg p-6 mb-8 border-2 border-[#22C55E]/20"
         >
           <div className="text-center">
-            <p className="text-sm text-gray-500 mb-4">
-              <span data-editor-id="app/components/SplitPage.tsx:81:14">Monthly Salary Amount</span>
-            </p>
+            <h3 className="text-sm font-medium text-gray-600 mb-4 text-center tracking-wide uppercase">
+              Monthly Salary Amount
+            </h3>
             <div className="flex items-center justify-center space-x-4 max-w-md mx-auto">
               <Icon icon="cryptocurrency:flow" className="text-2xl text-blue-600" />
               <div className="flex-1">
@@ -242,7 +242,9 @@ export default function SplitPage({
                 </div>
                 <div>
                   <h3 className="text-lg font-medium text-gray-900">
-                    <span data-editor-id="app/components/SplitPage.tsx:127:20">Savings (Vault)</span>
+                    <span data-editor-id="app/components/SplitPage.tsx:127:20">
+                      Savings (Vault)
+                    </span>
                   </h3>
                   <p className="text-sm text-gray-500 flex items-center space-x-1">
                     <Icon icon="cryptocurrency:flow" className="text-sm text-blue-600" />
@@ -357,7 +359,9 @@ export default function SplitPage({
                 </div>
                 <div>
                   <h3 className="text-lg font-medium text-gray-900">
-                    <span data-editor-id="app/components/SplitPage.tsx:191:20">Spending (Wallet)</span>
+                    <span data-editor-id="app/components/SplitPage.tsx:191:20">
+                      Spending (Wallet)
+                    </span>
                   </h3>
                   <p className="text-sm text-gray-500 flex items-center space-x-1">
                     <Icon icon="cryptocurrency:flow" className="text-sm text-blue-600" />
