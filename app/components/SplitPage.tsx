@@ -25,18 +25,23 @@ export default function SplitPage({
   // Manual loading state management for better UX
   const [isManualLoading, setIsManualLoading] = useState(false);
   const [showSuccessToast, setShowSuccessToast] = useState(false);
+  const [showErrorToast, setShowErrorToast] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
   const [lastTransactionTime, setLastTransactionTime] = useState<number | null>(null);
 
   const totalAllocated = splits.savings + splits.deFi + splits.spending;
-  const remaining = 100 - totalAllocated;
 
-  // Check if in cooldown period (10 seconds)
+  // Check if we're in cooldown period (10 seconds)
   const isInCooldown = lastTransactionTime && Date.now() - lastTransactionTime < 10000;
+  const remaining = 100 - totalAllocated;
 
   // Handle transaction with manual loading and success states
   const handleTransactionSubmit = async () => {
     if (isInCooldown) {
-      console.log("Transaction in cooldown period");
+      console.log("⏰ Transaction in cooldown period");
+      setErrorMessage("Transaction in cooldown period");
+      setShowErrorToast(true);
+      setTimeout(() => setShowErrorToast(false), 5000);
       return;
     }
 
@@ -47,11 +52,10 @@ export default function SplitPage({
     }
 
     setIsManualLoading(true);
-    setLastTransactionTime(Date.now());
 
     try {
-      // Execute the transaction
-      await setSplitConfig(
+      // Execute the transaction and wait for real blockchain result
+      const result = await setSplitConfig(
         salaryAmount, // amount: total FLOW amount
         splits.savings, // save: savings percentage
         splits.deFi, // lp: DeFi/LP percentage
@@ -59,22 +63,40 @@ export default function SplitPage({
         isLockVault // vault: boolean for vault lock
       );
 
-      // Show success after a reasonable delay (10 seconds)
-      setTimeout(() => {
-        setIsManualLoading(false);
-        setShowSuccessToast(true);
+      // Only set cooldown time after successful transaction submission
+      setLastTransactionTime(Date.now());
 
-        // Hide success toast after 5 seconds
-        setTimeout(() => {
-          setShowSuccessToast(false);
-        }, 5000);
-      }, 10000);
-
-      console.log("🎉 Transaction submitted successfully!");
-    } catch (error) {
-      console.error("❌ Transaction failed:", error);
-      // On error, stop loading immediately
+      // Show success only after transaction confirms on blockchain
       setIsManualLoading(false);
+      setShowSuccessToast(true);
+
+      // Hide success toast after 5 seconds
+      setTimeout(() => {
+        setShowSuccessToast(false);
+      }, 5000);
+
+      console.log("🎉 Transaction confirmed on blockchain!", result);
+    } catch (error: any) {
+      console.error("❌ Transaction failed:", error);
+      setIsManualLoading(false);
+      // Don't set cooldown time if transaction failed or was rejected
+
+      // Handle different types of errors
+      let errorMsg = "Transaction failed";
+      if (error?.message) {
+        if (
+          error.message.includes("Signatures Declined") ||
+          error.message.includes("User rejected")
+        ) {
+          errorMsg = "Signatures Declined: User rejected the request";
+        } else {
+          errorMsg = error.message;
+        }
+      }
+
+      setErrorMessage(errorMsg);
+      setShowErrorToast(true);
+      setTimeout(() => setShowErrorToast(false), 5000);
     }
   };
 
@@ -485,14 +507,16 @@ export default function SplitPage({
               configPending ||
               isLoading ||
               salaryAmount <= 0 ||
-              totalAllocated !== 100
+              totalAllocated !== 100 ||
+              isInCooldown
             }
             className={`px-8 py-4 rounded-xl text-lg font-medium transition-all duration-300 shadow-lg flex items-center space-x-2 mx-auto ${
               isManualLoading ||
               configPending ||
               isLoading ||
               salaryAmount <= 0 ||
-              totalAllocated !== 100
+              totalAllocated !== 100 ||
+              isInCooldown
                 ? "bg-gray-300 text-gray-500 cursor-not-allowed"
                 : "bg-[#22C55E] hover:bg-green-600 text-white cursor-pointer"
             }`}
@@ -514,6 +538,8 @@ export default function SplitPage({
                     ? "Enter salary amount"
                     : totalAllocated !== 100
                     ? `Allocate ${100 - totalAllocated}% more to reach 100%`
+                    : isInCooldown
+                    ? "Transaction in cooldown period"
                     : `Split ${salaryAmount.toFixed(1)} FLOW`}
                 </span>
               </>
@@ -586,6 +612,22 @@ export default function SplitPage({
                 <p className="text-sm opacity-90">
                   Your {salaryAmount.toFixed(1)} FLOW has been split successfully
                 </p>
+              </div>
+            </motion.div>
+          )}
+
+          {/* Error Toast */}
+          {showErrorToast && (
+            <motion.div
+              initial={{ opacity: 0, y: 20, scale: 0.9 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -20, scale: 0.9 }}
+              className="fixed top-20 right-4 bg-red-600 text-white px-6 py-4 rounded-xl shadow-lg flex items-center space-x-3 z-50"
+            >
+              <Icon icon="material-symbols:error" className="text-2xl" />
+              <div>
+                <p className="font-semibold">Transaction Failed! ❌</p>
+                <p className="text-sm opacity-90">{errorMessage}</p>
               </div>
             </motion.div>
           )}

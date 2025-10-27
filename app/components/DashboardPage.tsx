@@ -31,8 +31,15 @@ export default function DashboardPage({}: DashboardPageProps) {
     transactionHistory,
     fetchingTxHistory,
     connectedAddress,
+    error: contractError,
   } = useSeflowSalary();
   const realUserData = getUserData();
+
+  // Debug logging
+  console.log("🎯 Dashboard - contractLoading:", contractLoading);
+  console.log("🎯 Dashboard - contractError:", contractError);
+  console.log("🎯 Dashboard - realUserData:", realUserData);
+  console.log("🎯 Dashboard - connectedAddress:", connectedAddress);
 
   // Auto-refresh data every 30 seconds for live updates
   useEffect(() => {
@@ -45,11 +52,29 @@ export default function DashboardPage({}: DashboardPageProps) {
   }, [refreshData]);
 
   // Use real balances - always show real FLOW balance, 0 for savings/LP if no transactions
+  console.log("🔍 Debug realUserData:", realUserData);
+  console.log("🔍 Debug individual values:");
+  console.log(
+    "  - flowBalance raw:",
+    realUserData.flowBalance,
+    "type:",
+    typeof realUserData.flowBalance
+  );
+  console.log(
+    "  - savingsBalance raw:",
+    realUserData.savingsBalance,
+    "type:",
+    typeof realUserData.savingsBalance
+  );
+  console.log("  - lpBalance raw:", realUserData.lpBalance, "type:", typeof realUserData.lpBalance);
+
   const balances = {
-    savings: Number(realUserData.savingsBalance) || 0,
-    deFi: Number(realUserData.lpBalance) || 0,
-    spending: Number(realUserData.flowBalance) || 0,
+    savings: parseFloat(String(realUserData.savingsBalance)) || 0,
+    deFi: parseFloat(String(realUserData.lpBalance)) || 0,
+    spending: parseFloat(String(realUserData.flowBalance)) || 0,
   };
+
+  console.log("🔍 Debug converted balances:", balances);
 
   const totalBalance = Number(balances.savings + balances.deFi + balances.spending) || 0;
   const totalGains = 0; // Will show actual yields when Seflow contracts implement yield tracking
@@ -258,6 +283,16 @@ export default function DashboardPage({}: DashboardPageProps) {
                   {formatCurrency(totalBalance)}
                 </span>
               </p>
+            )}
+            {contractError && (
+              <div className="mb-4 p-3 bg-red-100 border border-red-300 rounded-lg">
+                <p className="text-red-700 text-sm">
+                  <span className="font-medium">Query Error:</span> {String(contractError)}
+                </p>
+                <p className="text-red-600 text-xs mt-1">
+                  Showing transaction history only. Contract data unavailable.
+                </p>
+              </div>
             )}
             <div className="flex items-center justify-center space-x-6 text-sm">
               <div className="flex items-center space-x-2">

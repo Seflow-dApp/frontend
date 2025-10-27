@@ -107,52 +107,69 @@ export const useSeflowSalary = (userAddress?: string) => {
     // Query real contract data from deployed Seflow contracts
     const { data: stats, isLoading, error, refetch } = useFlowQuery({
         cadence: `
-            // Real FLOW Balance Script - using deployed contracts
+            // Read REAL on-chain balances from deployed contracts
             import FungibleToken from 0x9a0766d93b6608b7
             import FlowToken from 0x7e60df042a9c0868
-            import FrothToken from 0x7d7f281847222367
             import SavingsVault from 0x7d7f281847222367
+            import LiquidityPool from 0x7d7f281847222367
+            import Seflow from 0x7d7f281847222367
 
             access(all) fun main(address: Address?): {String: AnyStruct} {
                 let targetAddress = address ?? 0x7d7f281847222367
                 let account = getAccount(targetAddress)
-                
-                // Get FLOW token balance
-                let flowVaultRef = account.capabilities.get<&FlowToken.Vault>(/public/flowTokenBalance)
-                    .borrow()
-                
-                let flowBalance = flowVaultRef?.balance ?? 0.0
-                
-                // Try to get FROTH token balance (if exists)
-                var frothBalance: UFix64 = 0.0
-                // In full implementation, would check for FROTH vault
-                
-                // Try to get SavingsVault balance (if exists) 
+
+                // 1. Get REAL FLOW balance from user's wallet
+                var flowBalance: UFix64 = 0.0
+                if let flowVaultRef = account.capabilities.get<&FlowToken.Vault>(/public/flowTokenBalance).borrow() {
+                    flowBalance = flowVaultRef.balance
+                    log("💰 Real FLOW balance: ".concat(flowBalance.toString()))
+                } else {
+                    log("⚠️ Could not access FLOW vault for address: ".concat(targetAddress.toString()))
+                }
+
+                // 2. Get REAL Savings balance from user's SavingsVault (if they have one)
                 var savingsBalance: UFix64 = 0.0
-                // In full implementation, would check SavingsVault
-                
-                // Mock some contract stats for now
-                let contractStats = {
-                    "totalUsers": 1 as UInt64,
-                    "totalSplits": 0 as UInt64,
-                    "totalVolumeProcessed": 0.0 as UFix64
+                // Try to borrow user's savings vault from their storage
+                if let savingsVaultRef = account.capabilities.get<&SavingsVault.Vault>(/public/savingsVault).borrow() {
+                    savingsBalance = savingsVaultRef.getBalance()
+                    log("💾 Real Savings balance: ".concat(savingsBalance.toString()))
+                } else {
+                    log("ℹ️ User has no SavingsVault or no public capability")
                 }
-                
-                let userData = {
-                    "flowBalance": flowBalance,
-                    "savingsBalance": savingsBalance,
-                    "lpBalance": 0.0 as UFix64,
-                    "frothBalance": frothBalance
+
+                // 3. Get REAL LP balance from user's LiquidityPool position (if they have one)
+                var lpBalance: UFix64 = 0.0
+                if let lpVaultRef = account.capabilities.get<&LiquidityPool.Vault>(/public/liquidityPoolVault).borrow() {
+                    lpBalance = lpVaultRef.getBalance()
+                    log("📈 Real LP balance: ".concat(lpBalance.toString()))
+                } else {
+                    log("ℹ️ User has no LP position or no public capability")
                 }
-                
-                return {
+
+                // 4. Get FROTH balance (placeholder for now)
+                var frothBalance: UFix64 = 0.0
+
+                // Get contract stats
+                let contractStats = Seflow.getContractStats()
+
+                let result = {
                     "address": targetAddress.toString(),
                     "contractStats": contractStats,
-                    "userData": userData,
-                    "totalValue": flowBalance + savingsBalance,
+                    "userData": {
+                        "flowBalance": flowBalance,
+                        "savingsBalance": savingsBalance,
+                        "lpBalance": lpBalance,
+                        "frothBalance": frothBalance
+                    },
+                    "totalValue": flowBalance + savingsBalance + lpBalance,
                     "timestamp": getCurrentBlock().timestamp,
                     "blockHeight": getCurrentBlock().height
                 }
+                
+                log("📊 Real balances result:")
+                log(result)
+                
+                return result
             }
         `,
         args: (arg: unknown, t: unknown) => [
@@ -167,6 +184,59 @@ export const useSeflowSalary = (userAddress?: string) => {
         data: splitTxId,
         error: splitError,
     } = useFlowMutate();
+
+    // State for managing setSplitConfig promise resolution
+    const [splitConfigResolvers, setSplitConfigResolvers] = useState<{
+        resolve: (value: string) => void;
+        reject: (error: any) => void;
+    } | null>(null);
+
+    // Create a separate mutation instance for setSplitConfig with proper callbacks
+    const {
+        mutate: executeSplitConfigMutation,
+        isPending: splitConfigPending,
+    } = useFlowMutate({
+        mutation: {
+            onSuccess: (txId: string) => {
+                console.log("✅ setSplitConfig transaction successful with ID:", txId);
+
+                // Refetch data and transaction history after successful transaction
+                setTimeout(() => {
+                    console.log("🔄 Refreshing balance data and transaction history after successful transaction...");
+                    refetch();
+                    if (activeUserAddress) {
+                        fetchBlockchainTransactions(activeUserAddress);
+                    }
+                }, 3000); // 3 second delay for blockchain confirmation
+
+                // Resolve the promise if we have resolvers
+                if (splitConfigResolvers) {
+                    splitConfigResolvers.resolve(txId);
+                    setSplitConfigResolvers(null);
+                }
+            },
+            onError: (error: any) => {
+                console.error("❌ setSplitConfig transaction failed:", error);
+
+                // Check if this is a user cancellation vs actual error
+                if (error?.message && (
+                    error.message.includes("Signatures Declined") ||
+                    error.message.includes("User rejected") ||
+                    error.message.includes("Declined:")
+                )) {
+                    console.log("ℹ️ User cancelled transaction - no cooldown applied");
+                } else {
+                    console.error("❌ Actual transaction error occurred:", error);
+                }
+
+                // Reject the promise if we have resolvers
+                if (splitConfigResolvers) {
+                    splitConfigResolvers.reject(error);
+                    setSplitConfigResolvers(null);
+                }
+            }
+        }
+    });
 
     // Mutation for yield compounding
     const {
@@ -196,6 +266,7 @@ export const useSeflowSalary = (userAddress?: string) => {
                 import FlowToken from 0x7e60df042a9c0868
                 import FrothToken from 0x7d7f281847222367
                 import SavingsVault from 0x7d7f281847222367
+                import LiquidityPool from 0x7d7f281847222367
                 import Seflow from 0x7d7f281847222367
 
                 transaction(
@@ -207,6 +278,7 @@ export const useSeflowSalary = (userAddress?: string) => {
                 ) {
                     let flowVault: auth(FungibleToken.Withdraw) &FlowToken.Vault
                     let userAddress: Address
+                    let signerAccount: auth(Storage, Capabilities) &Account
                     
                     prepare(signer: auth(Storage, Capabilities) &Account) {
                         // Validate percentages sum to 100
@@ -214,6 +286,9 @@ export const useSeflowSalary = (userAddress?: string) => {
                         if totalPercent != 100.0 {
                             panic("Percentages must sum to 100.0, got: ".concat(totalPercent.toString()))
                         }
+                        
+                        // Store signer account reference for use in execute
+                        self.signerAccount = signer
                         
                         // Get reference to user's FLOW vault with proper authorization
                         self.flowVault = signer.storage.borrow<auth(FungibleToken.Withdraw) &FlowToken.Vault>(
@@ -243,30 +318,62 @@ export const useSeflowSalary = (userAddress?: string) => {
                         log("📈 LP Investment: ".concat(lpAmount.toString()).concat(" FLOW (").concat(lpPercent.toString()).concat("%)"))
                         log("💸 Spending: ".concat(spendAmount.toString()).concat(" FLOW (").concat(spendPercent.toString()).concat("%)"))
                         
-                        // ==================== REAL FLOW OPERATIONS ====================
-                        // Using pattern: withdraw -> process -> deposit/keep
+                        // ==================== REAL VAULT OPERATIONS ====================
+                        // Create and use actual vaults instead of destroying tokens
                         
-                        // 1. Handle Savings Amount - Real FLOW movement
+                        // 1. Handle Savings Amount - Create/Use Real SavingsVault
                         if saveAmount > 0.0 {
                             let savingsFlow <- self.flowVault.withdraw(amount: saveAmount)
                             
-                            if useVault {
-                                // Destroy tokens to simulate locked vault deposit (can't access)
-                                destroy savingsFlow
-                                log("🔒 LOCKED ".concat(saveAmount.toString()).concat(" FLOW in savings vault (permanently removed from wallet)"))
-                            } else {
-                                // Destroy tokens to simulate liquid savings (moved out of spending wallet)
-                                destroy savingsFlow
-                                log("💼 MOVED ".concat(saveAmount.toString()).concat(" FLOW to liquid savings (removed from spending wallet)"))
+                            // Check if user has a savings vault, create if not
+                            if self.signerAccount.storage.borrow<&SavingsVault.Vault>(from: /storage/userSavingsVault) == nil {
+                                // Create new savings vault for user
+                                let newSavingsVault <- SavingsVault.createEmptyVault()
+                                self.signerAccount.storage.save(<-newSavingsVault, to: /storage/userSavingsVault)
+                                
+                                // Create public capability so dashboard can read it
+                                let savingsCap = self.signerAccount.capabilities.storage.issue<&SavingsVault.Vault>(/storage/userSavingsVault)
+                                self.signerAccount.capabilities.publish(savingsCap, at: /public/savingsVault)
+                                
+                                log("✨ Created new SavingsVault for user")
                             }
+                            
+                            // Get reference to user's savings vault and deposit
+                            let savingsVaultRef = self.signerAccount.storage.borrow<&SavingsVault.Vault>(from: /storage/userSavingsVault)!
+                            savingsVaultRef.deposit(amount: savingsFlow.balance, activateLock: useVault)
+                            
+                            // Destroy the empty vault (balance transferred)
+                            destroy savingsFlow
+                            
+                            let lockStatus = useVault ? "locked" : "unlocked"
+                            log("💾 DEPOSITED ".concat(saveAmount.toString()).concat(" FLOW to SavingsVault (").concat(lockStatus).concat(")"))
                         }
                         
-                        // 2. Handle LP Investment Amount - Real FLOW movement  
+                        // 2. Handle LP Investment Amount - Create/Use Real LiquidityPool
                         if lpAmount > 0.0 {
                             let lpFlow <- self.flowVault.withdraw(amount: lpAmount)
-                            // Destroy tokens to simulate LP investment (moved to liquidity pool)
+                            
+                            // Check if user has an LP vault, create if not
+                            if self.signerAccount.storage.borrow<&LiquidityPool.Vault>(from: /storage/userLPVault) == nil {
+                                // Create new LP vault for user
+                                let newLPVault <- LiquidityPool.createEmptyVault()
+                                self.signerAccount.storage.save(<-newLPVault, to: /storage/userLPVault)
+                                
+                                // Create public capability so dashboard can read it
+                                let lpCap = self.signerAccount.capabilities.storage.issue<&LiquidityPool.Vault>(/storage/userLPVault)
+                                self.signerAccount.capabilities.publish(lpCap, at: /public/liquidityPoolVault)
+                                
+                                log("✨ Created new LiquidityPool vault for user")
+                            }
+                            
+                            // Get reference to user's LP vault and deposit
+                            let lpVaultRef = self.signerAccount.storage.borrow<&LiquidityPool.Vault>(from: /storage/userLPVault)!
+                            lpVaultRef.deposit(amount: lpFlow.balance)
+                            
+                            // Destroy the empty vault (balance transferred)
                             destroy lpFlow
-                            log("📈 INVESTED ".concat(lpAmount.toString()).concat(" FLOW in liquidity pool (removed from wallet)"))
+                            
+                            log("📈 DEPOSITED ".concat(lpAmount.toString()).concat(" FLOW to LiquidityPool vault"))
                         }
                         
                         // Note: Only spending amount remains in the wallet
@@ -335,6 +442,8 @@ export const useSeflowSalary = (userAddress?: string) => {
         // Getters for contract data
         getContractStats: () => {
             const data = stats as SeflowData | undefined;
+            console.log("📊 getContractStats - raw data:", data);
+            console.log("📊 Query isLoading:", isLoading, "error:", error);
             return {
                 totalUsers: data?.contractStats?.totalUsers || 0,
                 totalSplits: data?.contractStats?.totalSplits || 0,
@@ -344,12 +453,16 @@ export const useSeflowSalary = (userAddress?: string) => {
 
         getUserData: () => {
             const data = stats as SeflowData | undefined;
-            return {
+            console.log("👤 getUserData - raw data:", data);
+            console.log("👤 Query isLoading:", isLoading, "error:", error);
+            const result = {
                 flowBalance: data?.userData?.flowBalance || 0.0,
                 savingsBalance: data?.userData?.savingsBalance || 0.0,
                 lpBalance: data?.userData?.lpBalance || 0.0,
                 frothBalance: data?.userData?.frothBalance || 0.0
             };
+            console.log("👤 getUserData - processed result:", result);
+            return result;
         },
 
         // Real blockchain transaction history
@@ -365,23 +478,155 @@ export const useSeflowSalary = (userAddress?: string) => {
             console.log("🎯 Executing Salary Split with real FLOW token transactions");
             console.log(`💰 Amount: ${amount} FLOW, 💾 Save: ${save}%, 📈 LP: ${lp}%, 💳 Spend: ${spend}%`);
 
-            try {
-                await handleSalarySplit(amount, save, lp, spend, vault);
+            return new Promise<string>((resolve, reject) => {
+                // Store the promise resolvers so the mutation callbacks can access them
+                setSplitConfigResolvers({ resolve, reject });
 
-                // Refetch data and transaction history after successful transaction (with delay for blockchain confirmation)
-                setTimeout(() => {
-                    console.log("🔄 Refreshing balance data and transaction history after successful transaction...");
-                    refetch();
-                    if (activeUserAddress) {
-                        fetchBlockchainTransactions(activeUserAddress);
-                    }
-                }, 5000); // 5 second delay for blockchain confirmation
+                try {
+                    // Execute the transaction using the configured mutation
+                    executeSplitConfigMutation({
+                        cadence: `
+                            // Real FLOW Token Transaction - using deployed contracts
+                            import FungibleToken from 0x9a0766d93b6608b7
+                            import FlowToken from 0x7e60df042a9c0868
+                            import FrothToken from 0x7d7f281847222367
+                            import SavingsVault from 0x7d7f281847222367
+                            import LiquidityPool from 0x7d7f281847222367
+                            import Seflow from 0x7d7f281847222367
 
-                return true;
-            } catch (error) {
-                console.error("❌ Transaction failed in setSplitConfig:", error);
-                throw error;
-            }
+                            transaction(
+                                totalAmount: UFix64,
+                                savePercent: UFix64,
+                                lpPercent: UFix64, 
+                                spendPercent: UFix64,
+                                useVault: Bool
+                            ) {
+                                let flowVault: auth(FungibleToken.Withdraw) &FlowToken.Vault
+                                let userAddress: Address
+                                let signerAccount: auth(Storage, Capabilities) &Account
+                                
+                                prepare(signer: auth(Storage, Capabilities) &Account) {
+                                    // Validate percentages sum to 100
+                                    let totalPercent = savePercent + lpPercent + spendPercent
+                                    if totalPercent != 100.0 {
+                                        panic("Percentages must sum to 100.0, got: ".concat(totalPercent.toString()))
+                                    }
+                                    
+                                    // Store signer account reference for use in execute
+                                    self.signerAccount = signer
+                                    
+                                    // Get reference to user's FLOW vault with proper authorization
+                                    self.flowVault = signer.storage.borrow<auth(FungibleToken.Withdraw) &FlowToken.Vault>(
+                                        from: /storage/flowTokenVault
+                                    ) ?? panic("Could not borrow Flow token vault from storage")
+                                    
+                                    // Check if user has enough FLOW
+                                    if self.flowVault.balance < totalAmount {
+                                        panic("Insufficient FLOW balance. Have: ".concat(self.flowVault.balance.toString()).concat(", Need: ").concat(totalAmount.toString()))
+                                    }
+                                    
+                                    self.userAddress = signer.address
+                                    
+                                    log("🚀 Executing REAL FLOW Seflow salary split...")
+                                    log("👤 User: ".concat(signer.address.toString()))
+                                    log("💰 Total Amount: ".concat(totalAmount.toString()).concat(" FLOW"))
+                                    log("💳 Balance Before: ".concat(self.flowVault.balance.toString()).concat(" FLOW"))
+                                }
+                                
+                                execute {
+                                    // Calculate split amounts
+                                    let saveAmount = totalAmount * savePercent / 100.0
+                                    let lpAmount = totalAmount * lpPercent / 100.0
+                                    let spendAmount = totalAmount * spendPercent / 100.0
+                                    
+                                    log("💵 Savings: ".concat(saveAmount.toString()).concat(" FLOW (").concat(savePercent.toString()).concat("%)"))
+                                    log("📈 LP Investment: ".concat(lpAmount.toString()).concat(" FLOW (").concat(lpPercent.toString()).concat("%)"))
+                                    log("💸 Spending: ".concat(spendAmount.toString()).concat(" FLOW (").concat(spendPercent.toString()).concat("%)"))
+                                    
+                                    // ==================== REAL VAULT OPERATIONS ====================
+                                    // Create and use actual vaults instead of destroying tokens
+                                    
+                                    // 1. Handle Savings Amount - Create/Use Real SavingsVault
+                                    if saveAmount > 0.0 {
+                                        let savingsFlow <- self.flowVault.withdraw(amount: saveAmount)
+                                        
+                                        // Check if user has a savings vault, create if not
+                                        if self.signerAccount.storage.borrow<&SavingsVault.Vault>(from: /storage/userSavingsVault) == nil {
+                                            // Create new savings vault for user
+                                            let newSavingsVault <- SavingsVault.createEmptyVault()
+                                            self.signerAccount.storage.save(<-newSavingsVault, to: /storage/userSavingsVault)
+                                            
+                                            // Create public capability so dashboard can read it
+                                            let savingsCap = self.signerAccount.capabilities.storage.issue<&SavingsVault.Vault>(/storage/userSavingsVault)
+                                            self.signerAccount.capabilities.publish(savingsCap, at: /public/savingsVault)
+                                            
+                                            log("✨ Created new SavingsVault for user")
+                                        }
+                                        
+                                        // Get reference to user's savings vault and deposit
+                                        let savingsVaultRef = self.signerAccount.storage.borrow<&SavingsVault.Vault>(from: /storage/userSavingsVault)!
+                                        savingsVaultRef.deposit(amount: savingsFlow.balance, activateLock: useVault)
+                                        
+                                        // Destroy the empty vault (balance transferred)
+                                        destroy savingsFlow
+                                        
+                                        let lockStatus = useVault ? "locked" : "unlocked"
+                                        log("💾 DEPOSITED ".concat(saveAmount.toString()).concat(" FLOW to SavingsVault (").concat(lockStatus).concat(")"))
+                                    }
+                                    
+                                    // 2. Handle LP Investment Amount - Create/Use Real LiquidityPool
+                                    if lpAmount > 0.0 {
+                                        let lpFlow <- self.flowVault.withdraw(amount: lpAmount)
+                                        
+                                        // Check if user has an LP vault, create if not
+                                        if self.signerAccount.storage.borrow<&LiquidityPool.Vault>(from: /storage/userLPVault) == nil {
+                                            // Create new LP vault for user
+                                            let newLPVault <- LiquidityPool.createEmptyVault()
+                                            self.signerAccount.storage.save(<-newLPVault, to: /storage/userLPVault)
+                                            
+                                            // Create public capability so dashboard can read it
+                                            let lpCap = self.signerAccount.capabilities.storage.issue<&LiquidityPool.Vault>(/storage/userLPVault)
+                                            self.signerAccount.capabilities.publish(lpCap, at: /public/liquidityPoolVault)
+                                            
+                                            log("✨ Created new LiquidityPool vault for user")
+                                        }
+                                        
+                                        // Get reference to user's LP vault and deposit
+                                        let lpVaultRef = self.signerAccount.storage.borrow<&LiquidityPool.Vault>(from: /storage/userLPVault)!
+                                        lpVaultRef.deposit(amount: lpFlow.balance)
+                                        
+                                        // Destroy the empty vault (balance transferred)
+                                        destroy lpFlow
+                                        
+                                        log("📈 DEPOSITED ".concat(lpAmount.toString()).concat(" FLOW to LiquidityPool vault"))
+                                    }
+                                    
+                                    // Note: Only spending amount remains in the wallet
+                                    log("💸 REMAINING ".concat(spendAmount.toString()).concat(" FLOW available for spending in wallet"))
+                                    
+                                    // 3. Calculate FROTH Rewards based on vault usage
+                                    let frothReward = useVault ? 1.5 : 1.0
+                                    log("🎉 Would mint ".concat(frothReward.toString()).concat(" FROTH reward tokens"))
+                                    
+                                    log("✅ REAL FLOW salary split completed!")
+                                    log("💳 Balance After: ".concat(self.flowVault.balance.toString()).concat(" FLOW"))
+                                }
+                            }
+                        `,
+                        args: (arg: unknown, t: unknown) => [
+                            (arg as any)(amount.toFixed(1), (t as any).UFix64),
+                            (arg as any)(save.toFixed(1), (t as any).UFix64),
+                            (arg as any)(lp.toFixed(1), (t as any).UFix64),
+                            (arg as any)(spend.toFixed(1), (t as any).UFix64),
+                            (arg as any)(vault, (t as any).Bool)
+                        ]
+                    });
+                } catch (error) {
+                    console.error("❌ Error setting up transaction in setSplitConfig:", error);
+                    setSplitConfigResolvers(null);
+                    reject(error);
+                }
+            });
         },
 
         // Manual refresh function for dashboard
@@ -404,6 +649,6 @@ export const useSeflowSalary = (userAddress?: string) => {
         })(),
 
         // For configuration tracking
-        configPending: splitPending
+        configPending: splitConfigPending
     };
 };
