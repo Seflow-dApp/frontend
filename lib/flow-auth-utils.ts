@@ -28,7 +28,7 @@ export const authenticateWithFlow = async () => {
 
         console.log("✅ Wallet Connected Successfully:", user);
         return user;
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error("🔐 Authentication Error:", error);
         throw error;
     }
@@ -42,7 +42,7 @@ export const logoutFromFlow = async () => {
         await fcl.unauthenticate();
         console.log("✅ Wallet Disconnected Successfully");
         return true;
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error("🔐 Logout Error:", error);
         // Even if logout fails, we should still clear local state
         return false;
@@ -78,11 +78,11 @@ export const getCurrentUser = async () => {
 /**
  * Enhanced transaction execution with better error handling
  */
-export const executeTransaction = async (transaction: string, args: any[] = []) => {
+export const executeTransaction = async (transaction: string, args: (() => unknown[]) | unknown[] = []) => {
     try {
         const txId = await fcl.mutate({
             cadence: transaction,
-            args: args as any,
+            args: typeof args === 'function' ? args : () => args,
             proposer: fcl.currentUser,
             payer: fcl.currentUser,
             authorizations: [fcl.currentUser],
@@ -99,7 +99,7 @@ export const executeTransaction = async (transaction: string, args: any[] = []) 
 
         console.log("✅ Transaction Successful:", result);
         return result;
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error("💸 Transaction Error:", error);
         throw error;
     }
@@ -116,7 +116,7 @@ export const executeScript = async (script: string, args: any[] = []) => {
         });
 
         return result;
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error("📜 Script Error:", error);
         throw error;
     }

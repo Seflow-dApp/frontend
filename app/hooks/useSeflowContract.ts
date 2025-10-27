@@ -34,9 +34,16 @@ interface TransactionHistory {
     txId?: string;
 }
 
+interface FCLUser {
+    addr?: string;
+    cid?: string;
+    loggedIn?: boolean;
+    services?: unknown[];
+}
+
 export const useSeflowSalary = (userAddress?: string) => {
     // Get current user address from FCL
-    const [currentUser, setCurrentUser] = useState<any>(null);
+    const [currentUser, setCurrentUser] = useState<FCLUser | null>(null);
     const [transactionHistory, setTransactionHistory] = useState<TransactionHistory[]>([]);
     const [fetchingTxHistory, setFetchingTxHistory] = useState(false);
 
@@ -148,8 +155,8 @@ export const useSeflowSalary = (userAddress?: string) => {
                 }
             }
         `,
-        args: (arg: any, t: any) => [
-            activeUserAddress ? arg(activeUserAddress, t.Address) : arg(null, t.Optional(t.Address))
+        args: (arg: unknown, t: unknown) => [
+            activeUserAddress ? (arg as any)(activeUserAddress, (t as any).Address) : (arg as any)(null, (t as any).Optional((t as any).Address))
         ],
     });
 
@@ -274,12 +281,12 @@ export const useSeflowSalary = (userAddress?: string) => {
                     }
                 }
             `,
-            args: (arg: any, t: any) => [
-                arg(totalAmount.toFixed(1), t.UFix64),
-                arg(savePercent.toFixed(1), t.UFix64),
-                arg(lpPercent.toFixed(1), t.UFix64),
-                arg(spendPercent.toFixed(1), t.UFix64),
-                arg(useVault, t.Bool)
+            args: (arg: unknown, t: unknown) => [
+                (arg as any)(totalAmount.toFixed(1), (t as any).UFix64),
+                (arg as any)(savePercent.toFixed(1), (t as any).UFix64),
+                (arg as any)(lpPercent.toFixed(1), (t as any).UFix64),
+                (arg as any)(spendPercent.toFixed(1), (t as any).UFix64),
+                (arg as any)(useVault, (t as any).Bool)
             ]
         });
     };
@@ -302,7 +309,7 @@ export const useSeflowSalary = (userAddress?: string) => {
                     }
                 }
             `,
-            args: (arg: any, t: any) => [arg(userAddress, t.Address)]
+            args: (arg: unknown, t: unknown) => [(arg as any)(userAddress, (t as any).Address)]
         });
     };
 

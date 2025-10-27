@@ -1,7 +1,7 @@
 import * as fcl from "@onflow/fcl";
 
 export const initializeFlowTestnet = () => {
-    const config: any = {
+    const config: Record<string, unknown> = {
         "accessNode.api": "https://rest-testnet.onflow.org",
         "flow.network": "testnet",
         "app.detail.title": "Seflow",

@@ -1,0 +1,42 @@
+"use client";
+
+import Navbar from "@/app/components/Navbar";
+import DashboardPage from "@/app/components/DashboardPage";
+import LoginPrompt from "@/app/components/LoginPrompt";
+import Footer from "@/app/components/Footer";
+import { useAuth } from "@/app/contexts/FlowAuthContext";
+
+export default function DashboardRoute() {
+  const { isConnected } = useAuth();
+
+  // Sample data matching the requirements
+  const sampleData = {
+    savings: 25,
+    deFi: 15,
+    spending: 10,
+    yields: 0.15,
+    froth: 1.5,
+  };
+
+  return (
+    <div className="min-h-screen bg-linear-to-br from-blue-50 to-purple-50">
+      <Navbar />
+      <main>
+        {!isConnected ? (
+          <LoginPrompt />
+        ) : (
+          <DashboardPage
+            data={{
+              savings: sampleData.savings,
+              deFi: sampleData.deFi,
+              spending: sampleData.spending,
+              yields: sampleData.yields,
+              froth: sampleData.froth,
+            }}
+          />
+        )}
+      </main>
+      <Footer />
+    </div>
+  );
+}

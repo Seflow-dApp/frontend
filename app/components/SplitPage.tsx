@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { Icon } from "@iconify/react";
 import { useSeflowSalary } from "@/app/hooks/useSeflowContract";
 
@@ -14,15 +14,13 @@ interface SplitPageProps {
 }
 
 export default function SplitPage({
-  initialData = { savings: 40, deFi: 30, spending: 30 },
+  initialData = { savings: 0, deFi: 0, spending: 0 },
 }: SplitPageProps) {
   const [splits, setSplits] = useState(initialData);
   const { setSplitConfig, isLoading, error, configPending } = useSeflowSalary();
   const [isLockVault, setIsLockVault] = useState(false);
-  const [animatingTokens, setAnimatingTokens] = useState<
-    Array<{ id: number; type: string; x: number; y: number }>
-  >([]);
-  const [salaryAmount, setSalaryAmount] = useState(100); // Editable FLOW amount
+  const [salaryAmount, setSalaryAmount] = useState(0); // Editable FLOW amount
+  const [salaryInput, setSalaryInput] = useState(""); // Display value for input
 
   // Manual loading state management for better UX
   const [isManualLoading, setIsManualLoading] = useState(false);
@@ -32,19 +30,33 @@ export default function SplitPage({
   const totalAllocated = splits.savings + splits.deFi + splits.spending;
   const remaining = 100 - totalAllocated;
 
+  // Check if in cooldown period (10 seconds)
+  const isInCooldown = lastTransactionTime && Date.now() - lastTransactionTime < 10000;
+
   // Handle transaction with manual loading and success states
   const handleTransactionSubmit = async () => {
+    if (isInCooldown) {
+      console.log("Transaction in cooldown period");
+      return;
+    }
+
+    // Validate percentages must equal exactly 100%
+    if (totalAllocated !== 100) {
+      alert(`Percentages must sum to exactly 100%. Currently: ${totalAllocated}%`);
+      return;
+    }
+
     setIsManualLoading(true);
     setLastTransactionTime(Date.now());
 
     try {
       // Execute the transaction
       await setSplitConfig(
-        splits.savings,
-        splits.deFi,
-        splits.spending,
-        isLockVault ? 1 : 0,
-        salaryAmount > 0
+        salaryAmount, // amount: total FLOW amount
+        splits.savings, // save: savings percentage
+        splits.deFi, // lp: DeFi/LP percentage
+        splits.spending, // spend: spending percentage
+        isLockVault // vault: boolean for vault lock
       );
 
       // Show success after a reasonable delay (10 seconds)
@@ -73,64 +85,51 @@ export default function SplitPage({
       // Set the new value for the changed slider
       newSplits[type] = value;
 
-      // Get the other two types
-      const otherTypes = Object.keys(newSplits).filter((key) => key !== type) as Array<
-        keyof typeof splits
-      >;
+      // Get the current total after the change
+      const currentTotal = Object.values(newSplits).reduce((sum, val) => sum + val, 0);
 
-      // Distribute the difference proportionally among the other sliders
-      const otherTotal = otherTypes.reduce((sum, key) => sum + newSplits[key], 0);
+      // If total exceeds 100%, adjust other sliders proportionally down
+      if (currentTotal > 100) {
+        const excess = currentTotal - 100;
+        const otherTypes = Object.keys(newSplits).filter((key) => key !== type) as Array<
+          keyof typeof splits
+        >;
 
-      if (otherTotal > 0) {
-        // Calculate how much to adjust each other slider
-        const adjustmentRatio = Math.max(0, 100 - value) / otherTotal;
+        // Calculate total of other sliders
+        const otherTotal = otherTypes.reduce((sum, key) => sum + newSplits[key], 0);
 
-        otherTypes.forEach((key) => {
-          newSplits[key] = Math.round(newSplits[key] * adjustmentRatio);
-        });
+        if (otherTotal > 0) {
+          // Reduce other sliders proportionally
+          let remainingExcess = excess;
+          otherTypes.forEach((key) => {
+            const reduction = Math.min(newSplits[key], (newSplits[key] / otherTotal) * excess);
+            newSplits[key] = Math.max(0, newSplits[key] - Math.round(reduction));
+            remainingExcess -= reduction;
+          });
 
-        // Fine-tune to ensure exact 100% total
-        const currentTotal = Object.values(newSplits).reduce((sum, val) => sum + val, 0);
-        const finalAdjustment = 100 - currentTotal;
-
-        // Apply any small adjustment to the largest other slider
-        if (finalAdjustment !== 0) {
-          const largestOtherType = otherTypes.reduce((max, key) =>
-            newSplits[key] > newSplits[max] ? key : max
-          );
-          newSplits[largestOtherType] = Math.max(0, newSplits[largestOtherType] + finalAdjustment);
+          // Handle any remaining excess by reducing the largest other slider
+          if (remainingExcess > 0) {
+            const largestOtherType = otherTypes.reduce((max, key) =>
+              newSplits[key] > newSplits[max] ? key : max
+            );
+            if (largestOtherType && newSplits[largestOtherType] > 0) {
+              newSplits[largestOtherType] = Math.max(
+                0,
+                newSplits[largestOtherType] - Math.round(remainingExcess)
+              );
+            }
+          }
         }
-      } else {
-        // If other sliders are at 0, distribute remaining evenly
-        const remainingPerSlider = Math.floor((100 - value) / otherTypes.length);
-        const remainder = (100 - value) % otherTypes.length;
 
-        otherTypes.forEach((key, index) => {
-          newSplits[key] = remainingPerSlider + (index < remainder ? 1 : 0);
-        });
+        // If other sliders can't accommodate, reduce the current slider
+        const finalTotal = Object.values(newSplits).reduce((sum, val) => sum + val, 0);
+        if (finalTotal > 100) {
+          newSplits[type] = Math.max(0, newSplits[type] - (finalTotal - 100));
+        }
       }
 
       return newSplits;
     });
-
-    // Trigger floating animation
-    triggerTokenAnimation(type);
-  };
-
-  const triggerTokenAnimation = (type: string) => {
-    const newToken = {
-      id: Date.now(),
-      type: type,
-      x: Math.random() * 300 + 50,
-      y: Math.random() * 200 + 100,
-    };
-
-    setAnimatingTokens((prev) => [...prev, newToken]);
-
-    // Remove token after animation
-    setTimeout(() => {
-      setAnimatingTokens((prev) => prev.filter((token) => token.id !== newToken.id));
-    }, 2000);
   };
 
   const calculateAmount = (percentage: number) => {
@@ -173,13 +172,28 @@ export default function SplitPage({
               <Icon icon="cryptocurrency:flow" className="text-2xl text-blue-600" />
               <div className="flex-1">
                 <input
-                  type="number"
-                  value={salaryAmount}
-                  onChange={(e) => setSalaryAmount(Math.max(0, parseFloat(e.target.value) || 0))}
-                  min="0"
-                  step="0.1"
+                  type="text"
+                  value={salaryInput}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    // Allow empty string, numbers, and decimal point
+                    if (value === "" || /^\d*\.?\d*$/.test(value)) {
+                      setSalaryInput(value);
+                      const numValue = parseFloat(value) || 0;
+                      setSalaryAmount(Math.max(0, numValue));
+                    }
+                  }}
+                  onBlur={() => {
+                    // Clean up the display when losing focus
+                    if (salaryAmount === 0 || salaryInput === "" || salaryInput === "0") {
+                      setSalaryInput("");
+                    } else {
+                      // Ensure the display shows a clean number format
+                      setSalaryInput(salaryAmount.toString());
+                    }
+                  }}
                   className="w-full text-2xl font-medium text-gray-900 text-center border-2 border-gray-200 rounded-xl px-4 py-2 focus:border-[#22C55E] focus:outline-none transition-colors"
-                  placeholder="100.0"
+                  placeholder="0.0"
                 />
               </div>
               <span className="text-2xl font-medium text-gray-900">FLOW</span>
@@ -192,42 +206,6 @@ export default function SplitPage({
 
         {/* Split Controls */}
         <div className="grid gap-8 mb-8 relative overflow-hidden">
-          {/* Floating Token Animations */}
-          <AnimatePresence>
-            {animatingTokens.map((token) => (
-              <motion.div
-                key={token.id}
-                initial={{ opacity: 1, scale: 1, x: token.x, y: token.y }}
-                animate={{
-                  opacity: 0,
-                  scale: 0.5,
-                  x: token.x + (Math.random() - 0.5) * 100,
-                  y: token.y - 100,
-                }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 2, ease: "easeOut" }}
-                className="absolute pointer-events-none z-10"
-              >
-                <Icon
-                  icon={
-                    token.type === "savings"
-                      ? "material-symbols:savings"
-                      : token.type === "deFi"
-                      ? "mdi:chart-line"
-                      : "material-symbols:shopping-cart"
-                  }
-                  className={`text-3xl ${
-                    token.type === "savings"
-                      ? "text-green-500"
-                      : token.type === "deFi"
-                      ? "text-blue-500"
-                      : "text-yellow-500"
-                  }`}
-                />
-              </motion.div>
-            ))}
-          </AnimatePresence>
-
           {/* Savings Slider */}
           <motion.div
             initial={{ opacity: 0, x: -50 }}
@@ -253,14 +231,30 @@ export default function SplitPage({
                 </div>
               </div>
               <div className="text-right">
-                <span className="text-2xl font-semibold text-green-600">{splits.savings}%</span>
+                <div className="flex items-center space-x-1 group">
+                  <input
+                    type="text"
+                    value={splits.savings}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      if (value === "" || /^\d*$/.test(value)) {
+                        const numValue = Math.min(100, Math.max(0, parseInt(value) || 0));
+                        handleSliderChange("savings", numValue);
+                      }
+                    }}
+                    className="w-16 text-2xl font-semibold text-green-600 text-right bg-green-50/50 border border-green-200/50 outline-none focus:bg-green-50 focus:border-green-400 hover:border-green-300 rounded-md px-2 py-1 transition-all duration-200 cursor-text"
+                    maxLength={3}
+                    title="Click to edit percentage"
+                  />
+                  <span className="text-2xl font-semibold text-green-600">%</span>
+                </div>
               </div>
             </div>
 
             <input
               type="range"
               min="0"
-              max="80"
+              max="100"
               value={splits.savings}
               onChange={(e) => handleSliderChange("savings", parseInt(e.target.value))}
               className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider-green"
@@ -294,14 +288,30 @@ export default function SplitPage({
                 </div>
               </div>
               <div className="text-right">
-                <span className="text-2xl font-semibold text-blue-600">{splits.deFi}%</span>
+                <div className="flex items-center space-x-1 group">
+                  <input
+                    type="text"
+                    value={splits.deFi}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      if (value === "" || /^\d*$/.test(value)) {
+                        const numValue = Math.min(100, Math.max(0, parseInt(value) || 0));
+                        handleSliderChange("deFi", numValue);
+                      }
+                    }}
+                    className="w-16 text-2xl font-semibold text-blue-600 text-right bg-blue-50/50 border border-blue-200/50 outline-none focus:bg-blue-50 focus:border-blue-400 hover:border-blue-300 rounded-md px-2 py-1 transition-all duration-200 cursor-text"
+                    maxLength={3}
+                    title="Click to edit percentage"
+                  />
+                  <span className="text-2xl font-semibold text-blue-600">%</span>
+                </div>
               </div>
             </div>
 
             <input
               type="range"
               min="0"
-              max="50"
+              max="100"
               value={splits.deFi}
               onChange={(e) => handleSliderChange("deFi", parseInt(e.target.value))}
               className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider-blue"
@@ -336,14 +346,30 @@ export default function SplitPage({
                 </div>
               </div>
               <div className="text-right">
-                <span className="text-2xl font-semibold text-yellow-600">{splits.spending}%</span>
+                <div className="flex items-center space-x-1 group">
+                  <input
+                    type="text"
+                    value={splits.spending}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      if (value === "" || /^\d*$/.test(value)) {
+                        const numValue = Math.min(100, Math.max(0, parseInt(value) || 0));
+                        handleSliderChange("spending", numValue);
+                      }
+                    }}
+                    className="w-16 text-2xl font-semibold text-yellow-600 text-right bg-yellow-50/50 border border-yellow-200/50 outline-none focus:bg-yellow-50 focus:border-yellow-400 hover:border-yellow-300 rounded-md px-2 py-1 transition-all duration-200 cursor-text"
+                    maxLength={3}
+                    title="Click to edit percentage"
+                  />
+                  <span className="text-2xl font-semibold text-yellow-600">%</span>
+                </div>
               </div>
             </div>
 
             <input
               type="range"
-              min="5"
-              max="60"
+              min="0"
+              max="100"
               value={splits.spending}
               onChange={(e) => handleSliderChange("spending", parseInt(e.target.value))}
               className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider-yellow"
@@ -455,10 +481,18 @@ export default function SplitPage({
             whileTap={{ scale: 0.95 }}
             onClick={handleTransactionSubmit}
             disabled={
-              isManualLoading || configPending || isLoading || remaining !== 0 || salaryAmount <= 0
+              isManualLoading ||
+              configPending ||
+              isLoading ||
+              salaryAmount <= 0 ||
+              totalAllocated !== 100
             }
             className={`px-8 py-4 rounded-xl text-lg font-medium transition-all duration-300 shadow-lg flex items-center space-x-2 mx-auto ${
-              isManualLoading || configPending || isLoading || remaining !== 0 || salaryAmount <= 0
+              isManualLoading ||
+              configPending ||
+              isLoading ||
+              salaryAmount <= 0 ||
+              totalAllocated !== 100
                 ? "bg-gray-300 text-gray-500 cursor-not-allowed"
                 : "bg-[#22C55E] hover:bg-green-600 text-white cursor-pointer"
             }`}
@@ -478,11 +512,9 @@ export default function SplitPage({
                 <span data-editor-id="app/components/SplitPage.tsx:330:16">
                   {salaryAmount <= 0
                     ? "Enter salary amount"
-                    : remaining === 0
-                    ? `Split ${salaryAmount.toFixed(1)} FLOW`
-                    : remaining > 0
-                    ? `Allocate remaining ${remaining}%`
-                    : "Reduce allocation (Over 100%)"}
+                    : totalAllocated !== 100
+                    ? `Allocate ${100 - totalAllocated}% more to reach 100%`
+                    : `Split ${salaryAmount.toFixed(1)} FLOW`}
                 </span>
               </>
             )}
@@ -498,31 +530,35 @@ export default function SplitPage({
             </motion.p>
           )}
 
-          {remaining !== 0 && salaryAmount > 0 && (
+          {totalAllocated !== 100 && salaryAmount > 0 && (
             <motion.p
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               className={`text-sm text-center mt-4 ${
-                remaining > 0 ? "text-yellow-600" : "text-red-600"
+                totalAllocated === 0
+                  ? "text-yellow-600"
+                  : remaining > 0
+                  ? "text-yellow-600"
+                  : "text-red-600"
               }`}
             >
-              {remaining > 0
-                ? `You have ${remaining}% unallocated. Please adjust your splits to total 100%.`
+              {totalAllocated === 0
+                ? "Please set your allocation percentages using the sliders above"
+                : remaining > 0
+                ? `You need to allocate ${remaining}% more to reach 100%`
                 : `You're over by ${Math.abs(
                     remaining
-                  )}%. Please reduce your allocations to total 100%.`}
+                  )}%. Please reduce your allocations to total 100%`}
             </motion.p>
           )}
 
-          {remaining === 0 && salaryAmount > 0 && (
+          {totalAllocated === 100 && salaryAmount > 0 && (
             <motion.p
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               className="text-green-600 text-sm text-center mt-4"
             >
-              Ready to split! Will deduct{" "}
-              {((salaryAmount * (splits.savings + splits.deFi)) / 100).toFixed(2)} FLOW (keeping{" "}
-              {((salaryAmount * splits.spending) / 100).toFixed(2)} FLOW for spending)
+              Perfect! All ${salaryAmount.toFixed(1)} FLOW will be allocated across your splits.
             </motion.p>
           )}
 

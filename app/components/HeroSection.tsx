@@ -110,31 +110,31 @@ export default function HeroSection({ onGetStarted }: HeroSectionProps) {
             <div className="relative">
               {/* Coins stack from bottom to top */}
               <div className="coin absolute bottom-0 left-1/2 transform -translate-x-1/2">
-                <div className="w-16 h-16 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-full flex items-center justify-center shadow-lg">
+                <div className="w-16 h-16 bg-linear-to-br from-yellow-400 to-yellow-600 rounded-full flex items-center justify-center shadow-lg">
                   <Icon icon="mdi:coins" className="text-white text-2xl" />
                 </div>
               </div>
 
               <div className="coin absolute bottom-8 left-1/2 transform -translate-x-1/2 -translate-x-4">
-                <div className="w-16 h-16 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center shadow-lg">
+                <div className="w-16 h-16 bg-linear-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center shadow-lg">
                   <Icon icon="material-symbols:savings" className="text-white text-2xl" />
                 </div>
               </div>
 
               <div className="coin absolute bottom-16 left-1/2 transform -translate-x-1/2 translate-x-4">
-                <div className="w-16 h-16 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center shadow-lg">
+                <div className="w-16 h-16 bg-linear-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center shadow-lg">
                   <Icon icon="mdi:chart-line" className="text-white text-2xl" />
                 </div>
               </div>
 
               <div className="coin absolute bottom-24 left-1/2 transform -translate-x-1/2 -translate-x-2">
-                <div className="w-16 h-16 bg-gradient-to-br from-purple-400 to-purple-600 rounded-full flex items-center justify-center shadow-lg">
+                <div className="w-16 h-16 bg-linear-to-br from-purple-400 to-purple-600 rounded-full flex items-center justify-center shadow-lg">
                   <Icon icon="ri:coins-fill" className="text-white text-2xl" />
                 </div>
               </div>
 
               <div className="coin absolute bottom-32 left-1/2 transform -translate-x-1/2 translate-x-2">
-                <div className="w-16 h-16 bg-gradient-to-br from-[#22C55E] to-green-700 rounded-full flex items-center justify-center shadow-lg">
+                <div className="w-16 h-16 bg-linear-to-br from-[#22C55E] to-green-700 rounded-full flex items-center justify-center shadow-lg">
                   <Icon icon="material-symbols:wallet" className="text-white text-2xl" />
                 </div>
               </div>

@@ -94,7 +94,7 @@ export default function AboutPage() {
           initial={{ opacity: 0, y: 50 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.2 }}
-          className="bg-gradient-to-br from-[#22C55E]/5 to-green-50 rounded-3xl p-8 md:p-12 mb-16"
+          className="bg-linear-to-br from-[#22C55E]/5 to-green-50 rounded-3xl p-8 md:p-12 mb-16"
         >
           <div className="text-center">
             <div className="w-20 h-20 bg-[#22C55E] rounded-2xl flex items-center justify-center mx-auto mb-6">

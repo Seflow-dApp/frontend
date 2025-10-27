@@ -17,9 +17,7 @@ interface DashboardPageProps {
   data?: DashboardData;
 }
 
-export default function DashboardPage({
-  data = { savings: 40, deFi: 30, spending: 30, yields: 0.15, froth: 1.5 },
-}: DashboardPageProps) {
+export default function DashboardPage({}: DashboardPageProps) {
   const [showYieldsBanner, setShowYieldsBanner] = useState(true);
   const [animatingCoins, setAnimatingCoins] = useState<Array<{ id: number; x: number; y: number }>>(
     []
@@ -46,18 +44,14 @@ export default function DashboardPage({
     return () => clearInterval(interval);
   }, [refreshData]);
 
-  // Using real contract data - no more mock salary amounts
-
   // Use real balances - always show real FLOW balance, 0 for savings/LP if no transactions
   const balances = {
     savings: Number(realUserData.savingsBalance) || 0,
     deFi: Number(realUserData.lpBalance) || 0,
-    // Always show real FLOW balance (even if 0) - never fallback to mock data
     spending: Number(realUserData.flowBalance) || 0,
   };
 
   const totalBalance = Number(balances.savings + balances.deFi + balances.spending) || 0;
-  // Calculate gains based on real transaction history rather than mock salary
   const totalGains = 0; // Will show actual yields when Seflow contracts implement yield tracking
 
   // Animate coins periodically
@@ -93,7 +87,7 @@ export default function DashboardPage({
       amount: balances.savings,
       icon: "material-symbols:savings",
       color: "green",
-      bgColor: "bg-gradient-to-br from-green-50 to-green-100",
+      bgColor: "bg-linear-to-br from-green-50 to-green-100",
       iconBg: "bg-green-500",
       textColor: "text-green-600",
       accentColor: "border-green-200",
@@ -103,7 +97,7 @@ export default function DashboardPage({
       amount: balances.deFi,
       icon: "mdi:chart-line",
       color: "blue",
-      bgColor: "bg-gradient-to-br from-blue-50 to-blue-100",
+      bgColor: "bg-linear-to-br from-blue-50 to-blue-100",
       iconBg: "bg-blue-500",
       textColor: "text-blue-600",
       accentColor: "border-blue-200",
@@ -113,7 +107,7 @@ export default function DashboardPage({
       amount: balances.spending,
       icon: "material-symbols:shopping-cart",
       color: "yellow",
-      bgColor: "bg-gradient-to-br from-yellow-50 to-yellow-100",
+      bgColor: "bg-linear-to-br from-yellow-50 to-yellow-100",
       iconBg: "bg-yellow-500",
       textColor: "text-yellow-600",
       accentColor: "border-yellow-200",
@@ -331,9 +325,6 @@ export default function DashboardPage({
               <h3 className="text-xl font-semibold text-gray-900 flex items-center space-x-2">
                 <Icon icon="material-symbols:history" className="text-xl text-gray-600" />
                 <span>Recent Transactions</span>
-                {fetchingTxHistory && (
-                  <div className="animate-spin rounded-full h-4 w-4 border-b border-blue-600"></div>
-                )}
               </h3>
               {connectedAddress && (
                 <div className="text-sm text-gray-600 bg-gray-100 px-3 py-1 rounded-lg font-mono">
@@ -377,7 +368,7 @@ export default function DashboardPage({
                           {tx.txId && (
                             <div className="text-xs text-blue-600 font-mono mt-1">
                               <a
-                                href={`https://testnet.flowscan.org/transaction/${tx.txId}`}
+                                href={`https://testnet.flowscan.io/tx/${tx.txId}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="hover:underline"
@@ -415,41 +406,6 @@ export default function DashboardPage({
               )}
             </div>
           </div>
-        </motion.div>
-
-        {/* Quick Actions */}
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.8 }}
-          className="grid md:grid-cols-3 gap-4"
-        >
-          <motion.button
-            whileHover={{ scale: 1.02, boxShadow: "0 10px 25px -5px rgba(34, 197, 94, 0.3)" }}
-            whileTap={{ scale: 0.98 }}
-            className="bg-white border-2 border-[#22C55E] text-[#22C55E] hover:bg-[#22C55E] hover:text-white rounded-xl p-4 font-medium transition-all duration-300 flex items-center justify-center space-x-2 cursor-pointer"
-          >
-            <Icon icon="material-symbols:add" className="text-xl" />
-            <span data-editor-id="app/components/DashboardPage.tsx:225:12">Add Funds</span>
-          </motion.button>
-
-          <motion.button
-            whileHover={{ scale: 1.02, boxShadow: "0 10px 25px -5px rgba(15, 118, 110, 0.3)" }}
-            whileTap={{ scale: 0.98 }}
-            className="bg-white border-2 border-[#0F766E] text-[#0F766E] hover:bg-[#0F766E] hover:text-white rounded-xl p-4 font-medium transition-all duration-300 flex items-center justify-center space-x-2 cursor-pointer"
-          >
-            <Icon icon="material-symbols:settings" className="text-xl" />
-            <span data-editor-id="app/components/DashboardPage.tsx:234:12">Adjust Split</span>
-          </motion.button>
-
-          <motion.button
-            whileHover={{ scale: 1.02, boxShadow: "0 10px 25px -5px rgba(30, 58, 138, 0.3)" }}
-            whileTap={{ scale: 0.98 }}
-            className="bg-white border-2 border-[#1E3A8A] text-[#1E3A8A] hover:bg-[#1E3A8A] hover:text-white rounded-xl p-4 font-medium transition-all duration-300 flex items-center justify-center space-x-2 cursor-pointer"
-          >
-            <Icon icon="material-symbols:history" className="text-xl" />
-            <span data-editor-id="app/components/DashboardPage.tsx:243:12">View History</span>
-          </motion.button>
         </motion.div>
       </div>
     </div>

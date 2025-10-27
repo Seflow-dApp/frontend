@@ -1,14 +1,21 @@
 "use client";
 
-import { createContext, useContext, ReactNode, useState, useEffect } from "react";
+import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { useFlowCurrentUser } from "@onflow/react-sdk";
 import { authenticateWithFlow, logoutFromFlow } from "@/lib/flow-auth-utils";
 import * as fcl from "@onflow/fcl";
 
+// Type for FCL current user
+interface FlowUser {
+  addr?: string;
+  loggedIn?: boolean;
+  [key: string]: unknown;
+}
+
 interface FlowAuthContextType {
   isConnected: boolean;
   walletAddress: string | null;
-  user: any;
+  user: FlowUser | null;
   connectWallet: () => Promise<void>;
   disconnectWallet: () => void;
 }
@@ -38,7 +45,7 @@ export const FlowAuthProvider = ({ children }: FlowAuthProviderProps) => {
 
   // Listen to FCL authentication changes
   useEffect(() => {
-    const unsubscribe = fcl.currentUser.subscribe((user: any) => {
+    const unsubscribe = fcl.currentUser.subscribe((user) => {
       console.log("🔄 FCL User state changed:", user);
       setLocalUser(user);
     });
@@ -55,7 +62,6 @@ export const FlowAuthProvider = ({ children }: FlowAuthProviderProps) => {
       console.log("Attempting to authenticate with enhanced auth utils...");
       const result = await authenticateWithFlow();
       console.log("Authentication successful:", result);
-      // Force update local state
       setLocalUser(result);
     } catch (error) {
       console.error("🔐 Authentication failed:", error);
@@ -81,7 +87,7 @@ export const FlowAuthProvider = ({ children }: FlowAuthProviderProps) => {
       value={{
         isConnected,
         walletAddress,
-        user: currentUser,
+        user: currentUser as unknown as FlowUser,
         connectWallet,
         disconnectWallet,
       }}

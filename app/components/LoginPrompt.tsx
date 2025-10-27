@@ -53,7 +53,7 @@ export default function LoginPrompt() {
                 <h3 className="font-semibold text-gray-900 mb-2">Secure & Private</h3>
                 <p className="text-sm text-gray-600 leading-relaxed">
                   Your wallet connection is secure and your data remains private. We only access
-                  what's necessary to provide our services.
+                  what&apos;s necessary to provide our services.
                 </p>
               </div>
             </div>

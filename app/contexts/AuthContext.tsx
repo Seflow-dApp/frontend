@@ -29,11 +29,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   const connectWallet = async () => {
     try {
-      // Mock wallet connection - in real app this would integrate with Web3 wallet
-      // Simulate connection delay
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      // Mock wallet address
       const mockAddress = "0x1234...5678";
       setWalletAddress(mockAddress);
       setIsConnected(true);

@@ -57,7 +57,7 @@ export const useSeflowSalary = () => {
             setIsLoading(true);
             const result = await fcl.query({
                 cadence: GET_BALANCES_SCRIPT,
-                args: (arg: any, t: any) => [arg(address, t.Address)],
+                args: (arg: unknown, t: unknown) => [(arg as any)(address, (t as any).Address)],
             });
 
             if (result) {
@@ -84,12 +84,12 @@ export const useSeflowSalary = () => {
 
             const transactionId = await fcl.mutate({
                 cadence: SALARY_SPLIT_TRANSACTION,
-                args: (arg: any, t: any) => [
-                    arg(totalAmount.toFixed(1), t.UFix64),
-                    arg(savePercent.toFixed(1), t.UFix64),
-                    arg(lpPercent.toFixed(1), t.UFix64),
-                    arg(spendPercent.toFixed(1), t.UFix64),
-                    arg(useVault, t.Bool),
+                args: (arg: unknown, t: unknown) => [
+                    (arg as any)(totalAmount.toFixed(1), (t as any).UFix64),
+                    (arg as any)(savePercent.toFixed(1), (t as any).UFix64),
+                    (arg as any)(lpPercent.toFixed(1), (t as any).UFix64),
+                    (arg as any)(spendPercent.toFixed(1), (t as any).UFix64),
+                    (arg as any)(useVault, (t as any).Bool),
                 ],
                 proposer: fcl.currentUser,
                 payer: fcl.currentUser,

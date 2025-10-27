@@ -11,12 +11,65 @@ interface TransactionHistory {
     txId?: string;
 }
 
+// FindLabs API response types
+interface FindLabsTag {
+    id: string;
+    name: string;
+    type: string;
+    logo?: string;
+}
+
+interface FindLabsEvent {
+    id?: string;
+    name: string;
+    type?: string;
+    fields?: string | Record<string, unknown>;
+    timestamp?: string;
+    event_index?: number;
+    block_height?: number;
+}
+
+interface FindLabsTransaction {
+    id: string;
+    status: string;
+    timestamp: string;
+    error?: string;
+    error_code?: string;
+    transaction_body_hash?: string;
+    tags?: FindLabsTag[];
+    events?: FindLabsEvent[];
+    fee?: number;
+    gas_used?: number;
+    payer?: string;
+    proposer?: string;
+    authorizers?: string[];
+    contract_imports?: string[];
+    contract_outputs?: string[];
+}
+
+// Flow Access Node types
+interface FlowEvent {
+    type: string;
+    data?: Record<string, unknown>;
+}
+
+interface FlowTransactionResult {
+    status: number;
+    block_timestamp: string;
+    events?: FlowEvent[];
+}
+
+interface FlowTransaction {
+    id: string;
+    result?: FlowTransactionResult;
+}
+
 export async function GET(
     request: NextRequest,
-    { params }: { params: { address: string } }
+    { params }: { params: Promise<{ address: string }> }
 ) {
     try {
-        const { address } = params;
+        const { address } = await params;
 
         // Validate address format
         if (!address || (!address.startsWith('0x') && address.length !== 16)) {
@@ -85,7 +138,7 @@ export async function GET(
                     // Parse FindLabs response format
                     transactions = items
                         .slice(0, 50)
-                        .map((tx: any, i: number) => {
+                        .map((tx: FindLabsTransaction, i: number) => {
                             const status = tx.status?.toLowerCase() === 'sealed' ? 'success' :
                                 tx.error ? 'failed' : 'success';
                             const timestamp = tx.timestamp || new Date().toISOString();
@@ -93,31 +146,40 @@ export async function GET(
                             // Extract transaction details
                             let amount = 0;
                             let type: TransactionHistory['type'] = 'transfer';
-                            let details = tx.tags?.map((t: any) => t.name).join(', ') || 'Flow transaction';
+                            let details = tx.tags?.map((t) => t.name).join(', ') || 'Flow transaction';
 
                             // Parse events for more details
                             const events = tx.events || [];
                             if (Array.isArray(events)) {
                                 // Look for FLOW token events
-                                const ftEvents = events.filter((e: any) =>
+                                const ftEvents = events.filter((e) =>
                                     (e.name || '').includes('FlowToken') ||
                                     (e.type || '').includes('FlowToken')
                                 );
 
                                 if (ftEvents.length > 0) {
-                                    const withdrawEvent = ftEvents.find((e: any) =>
+                                    const withdrawEvent = ftEvents.find((e) =>
                                         (e.name || '').includes('TokensWithdrawn') ||
                                         (e.type || '').includes('TokensWithdrawn')
                                     );
 
                                     if (withdrawEvent) {
                                         // Try different field formats for amount
-                                        const amountField = withdrawEvent.fields ?
-                                            (typeof withdrawEvent.fields === 'string' ?
-                                                JSON.parse(withdrawEvent.fields)?.amount :
-                                                withdrawEvent.fields?.amount) : null;
+                                        let amountField: unknown = null;
+                                        if (withdrawEvent.fields) {
+                                            if (typeof withdrawEvent.fields === 'string') {
+                                                try {
+                                                    const parsed = JSON.parse(withdrawEvent.fields) as Record<string, unknown>;
+                                                    amountField = parsed.amount;
+                                                } catch {
+                                                    // Ignore parse errors
+                                                }
+                                            } else if (typeof withdrawEvent.fields === 'object' && withdrawEvent.fields !== null) {
+                                                amountField = (withdrawEvent.fields as Record<string, unknown>).amount;
+                                            }
+                                        }
 
-                                        if (amountField) {
+                                        if (amountField && (typeof amountField === 'string' || typeof amountField === 'number')) {
                                             amount = Number(amountField);
                                             details = `FLOW Transfer (${amount.toFixed(2)} FLOW)`;
                                         }
@@ -125,7 +187,7 @@ export async function GET(
                                 }
 
                                 // Check for Seflow contract interactions
-                                const seflowEvent = events.find((e: any) =>
+                                const seflowEvent = events.find((e) =>
                                     (e.name || '').includes('0x7d7f281847222367') ||
                                     (e.type || '').includes('0x7d7f281847222367')
                                 );
@@ -134,9 +196,7 @@ export async function GET(
                                     type = 'salary_split';
                                     details = 'Seflow Salary Split';
                                 }
-                            }
-
-                            return {
+                            } return {
                                 id: tx.id || tx.transaction_body_hash || `tx-${i}`,
                                 type,
                                 amount: Number(amount) || 0,
@@ -174,10 +234,10 @@ export async function GET(
                     const data = await response.json();
                     console.log(`📄 [API] Access Node returned ${data.length} transactions`);
 
-                    transactions = data
-                        .filter((tx: any) => tx.result?.status === 0)
+                    transactions = (data as FlowTransaction[])
+                        .filter((tx) => tx.result?.status === 0)
                         .slice(0, 20)
-                        .map((tx: any, index: number) => {
+                        .map((tx, index: number) => {
                             const timestamp = new Date(tx.result?.block_timestamp || Date.now()).toISOString();
 
                             let type: TransactionHistory['type'] = 'transfer';
@@ -186,22 +246,22 @@ export async function GET(
 
                             // Parse Flow Access Node event format
                             if (tx.result?.events) {
-                                const flowEvents = tx.result.events.filter((event: any) =>
+                                const flowEvents = tx.result.events.filter((event) =>
                                     event.type.includes('FlowToken.TokensWithdrawn') ||
                                     event.type.includes('FlowToken.TokensDeposited')
                                 );
 
                                 if (flowEvents.length > 0) {
-                                    const withdrawEvent = flowEvents.find((e: any) =>
+                                    const withdrawEvent = flowEvents.find((e) =>
                                         e.type.includes('TokensWithdrawn')
                                     );
-                                    if (withdrawEvent?.data?.amount) {
+                                    if (withdrawEvent?.data?.amount && typeof withdrawEvent.data.amount === 'string') {
                                         amount = parseFloat(withdrawEvent.data.amount);
                                         details = `FLOW Token Transfer (${amount.toFixed(2)} FLOW)`;
                                     }
                                 }
 
-                                const seflowEvents = tx.result.events.filter((event: any) =>
+                                const seflowEvents = tx.result.events.filter((event) =>
                                     event.type.includes('0x7d7f281847222367')
                                 );
 
