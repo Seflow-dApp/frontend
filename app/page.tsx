@@ -8,7 +8,7 @@ import DashboardPage from "@/app/components/DashboardPage";
 import AboutPage from "@/app/components/AboutPage";
 import LoginPrompt from "@/app/components/LoginPrompt";
 import Footer from "@/app/components/Footer";
-import { useAuth } from "@/app/contexts/AuthContext";
+import { useAuth } from "@/app/contexts/FlowAuthContext";
 
 type ActiveTab = "home" | "split" | "dashboard" | "about";
 

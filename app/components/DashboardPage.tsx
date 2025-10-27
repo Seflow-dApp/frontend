@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import { useState, useEffect } from "react";
 import { Icon } from "@iconify/react";
+import { useSeflowSalary } from "@/app/hooks/useSeflowContract";
 
 interface DashboardData {
   savings: number;
@@ -17,24 +18,47 @@ interface DashboardPageProps {
 }
 
 export default function DashboardPage({
-  data = { savings: 25, deFi: 15, spending: 10, yields: 0.15, froth: 1.5 },
+  data = { savings: 40, deFi: 30, spending: 30, yields: 0.15, froth: 1.5 },
 }: DashboardPageProps) {
   const [showYieldsBanner, setShowYieldsBanner] = useState(true);
   const [animatingCoins, setAnimatingCoins] = useState<Array<{ id: number; x: number; y: number }>>(
     []
   );
 
-  const salaryAmount = 10000000; // 10 million IDR sample
+  // Get real contract data
+  const {
+    getUserData,
+    isLoading: contractLoading,
+    refreshData,
+    transactionHistory,
+    fetchingTxHistory,
+    connectedAddress,
+  } = useSeflowSalary();
+  const realUserData = getUserData();
 
+  // Auto-refresh data every 30 seconds for live updates
+  useEffect(() => {
+    const interval = setInterval(() => {
+      console.log("🔄 Auto-refreshing dashboard data...");
+      refreshData();
+    }, 30000); // 30 seconds
+
+    return () => clearInterval(interval);
+  }, [refreshData]);
+
+  // Using real contract data - no more mock salary amounts
+
+  // Use real balances - always show real FLOW balance, 0 for savings/LP if no transactions
   const balances = {
-    savings: ((salaryAmount * data.savings) / 100) * (1 + data.yields),
-    deFi: ((salaryAmount * data.deFi) / 100) * (1 + data.yields * data.froth),
-    spending: (salaryAmount * data.spending) / 100,
+    savings: Number(realUserData.savingsBalance) || 0,
+    deFi: Number(realUserData.lpBalance) || 0,
+    // Always show real FLOW balance (even if 0) - never fallback to mock data
+    spending: Number(realUserData.flowBalance) || 0,
   };
 
-  const totalBalance = balances.savings + balances.deFi + balances.spending;
-  const totalGains =
-    balances.savings + balances.deFi - (salaryAmount * (data.savings + data.deFi)) / 100;
+  const totalBalance = Number(balances.savings + balances.deFi + balances.spending) || 0;
+  // Calculate gains based on real transaction history rather than mock salary
+  const totalGains = 0; // Will show actual yields when Seflow contracts implement yield tracking
 
   // Animate coins periodically
   useEffect(() => {
@@ -56,15 +80,17 @@ export default function DashboardPage({
     return () => clearInterval(interval);
   }, []);
 
-  const formatCurrency = (amount: number) => {
-    return `Rp ${amount.toLocaleString("id-ID")}`;
+  const formatCurrency = (amount: number | undefined | null) => {
+    if (typeof amount !== "number" || isNaN(amount)) {
+      return "0.00 FLOW";
+    }
+    return `${amount.toFixed(2)} FLOW`;
   };
 
   const cards = [
     {
       title: "Savings Balance",
       amount: balances.savings,
-      percentage: data.savings,
       icon: "material-symbols:savings",
       color: "green",
       bgColor: "bg-gradient-to-br from-green-50 to-green-100",
@@ -75,7 +101,6 @@ export default function DashboardPage({
     {
       title: "DeFi Investments",
       amount: balances.deFi,
-      percentage: data.deFi,
       icon: "mdi:chart-line",
       color: "blue",
       bgColor: "bg-gradient-to-br from-blue-50 to-blue-100",
@@ -86,7 +111,6 @@ export default function DashboardPage({
     {
       title: "Spending Wallet",
       amount: balances.spending,
-      percentage: data.spending,
       icon: "material-symbols:shopping-cart",
       color: "yellow",
       bgColor: "bg-gradient-to-br from-yellow-50 to-yellow-100",
@@ -124,11 +148,26 @@ export default function DashboardPage({
           transition={{ duration: 0.6 }}
           className="text-center mb-8"
         >
-          <h1 className="text-3xl md:text-4xl font-light text-gray-900 mb-4">
-            <span data-editor-id="app/components/DashboardPage.tsx:97:12">
-              Your Financial Dashboard
-            </span>
-          </h1>
+          <div className="flex items-center justify-center space-x-4 mb-4">
+            <h1 className="text-3xl md:text-4xl font-light text-gray-900">
+              <span data-editor-id="app/components/DashboardPage.tsx:97:12">
+                Your Financial Dashboard
+              </span>
+            </h1>
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={refreshData}
+              disabled={contractLoading}
+              className="p-2 bg-blue-100 hover:bg-blue-200 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Refresh data from blockchain"
+            >
+              <Icon
+                icon="material-symbols:refresh"
+                className={`text-xl text-blue-600 ${contractLoading ? "animate-spin" : ""}`}
+              />
+            </motion.button>
+          </div>
           <p className="text-lg text-gray-600">
             <span data-editor-id="app/components/DashboardPage.tsx:100:12">
               Track your automated wealth growth in real-time
@@ -144,7 +183,7 @@ export default function DashboardPage({
             transition={{ duration: 0.8, delay: 0.2 }}
             className="mb-8 relative"
           >
-            <div className="bg-gradient-to-r from-[#22C55E] to-green-600 rounded-2xl p-6 text-white shadow-2xl relative overflow-hidden">
+            <div className="bg-linear-to-r from-[#22C55E] to-green-600 rounded-2xl p-6 text-white shadow-2xl relative overflow-hidden">
               <motion.div
                 animate={{
                   background: [
@@ -200,37 +239,44 @@ export default function DashboardPage({
           className="bg-white rounded-2xl shadow-lg p-8 mb-8 border border-gray-100"
         >
           <div className="text-center">
-            <p className="text-sm text-gray-500 mb-2">
-              <span data-editor-id="app/components/DashboardPage.tsx:154:14">
-                Total Portfolio Value
-              </span>
-            </p>
-            <p className="text-4xl font-light text-gray-900 mb-4">
-              <span data-editor-id="app/components/DashboardPage.tsx:157:14">
-                {formatCurrency(totalBalance)}
-              </span>
-            </p>
+            <div className="flex items-center justify-center space-x-2 mb-2">
+              <Icon icon="cryptocurrency:flow" className="text-blue-600 text-lg" />
+              <p className="text-sm text-gray-500">
+                <span data-editor-id="app/components/DashboardPage.tsx:154:14">
+                  Total Portfolio Value
+                </span>
+              </p>
+              {contractLoading && (
+                <div className="flex items-center space-x-1">
+                  <div className="animate-spin rounded-full h-3 w-3 border-b border-blue-600"></div>
+                  <span className="text-xs text-blue-600">Updating...</span>
+                </div>
+              )}
+            </div>
+            {contractLoading ? (
+              <div className="flex items-center justify-center space-x-2 mb-4">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                <span className="text-gray-500">Loading real balance...</span>
+              </div>
+            ) : (
+              <p className="text-4xl font-light text-gray-900 mb-4">
+                <span data-editor-id="app/components/DashboardPage.tsx:157:14">
+                  {formatCurrency(totalBalance)}
+                </span>
+              </p>
+            )}
             <div className="flex items-center justify-center space-x-6 text-sm">
               <div className="flex items-center space-x-2">
                 <div className="w-3 h-3 bg-green-500 rounded-full"></div>
                 <span className="text-gray-600">
                   <span data-editor-id="app/components/DashboardPage.tsx:162:18">
-                    Monthly Gain: +
-                    {(
-                      (totalGains / ((salaryAmount * (data.savings + data.deFi)) / 100)) *
-                      100
-                    ).toFixed(1)}
-                    %
+                    Connected:{" "}
+                    {connectedAddress ? `${connectedAddress.slice(0, 8)}...` : "Not Connected"}
                   </span>
                 </span>
               </div>
               <div className="flex items-center space-x-2">
                 <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                <span className="text-gray-600">
-                  <span data-editor-id="app/components/DashboardPage.tsx:167:18">
-                    Active Investments: 2
-                  </span>
-                </span>
               </div>
             </div>
           </div>
@@ -253,11 +299,6 @@ export default function DashboardPage({
                 >
                   <Icon icon={card.icon} className="text-2xl text-white" />
                 </div>
-                <div
-                  className={`px-3 py-1 bg-white/70 ${card.textColor} rounded-full text-sm font-medium`}
-                >
-                  {card.percentage}%
-                </div>
               </div>
 
               <h3 className="text-lg font-medium text-gray-800 mb-2">
@@ -267,34 +308,114 @@ export default function DashboardPage({
               </h3>
 
               <div className="space-y-2">
-                <p className={`text-2xl font-semibold ${card.textColor}`}>
-                  {formatCurrency(card.amount)}
-                </p>
-
-                {(card.color === "green" || card.color === "blue") && (
-                  <div className="flex items-center space-x-1 text-sm text-green-600">
-                    <Icon icon="material-symbols:trending-up" className="text-sm" />
-                    <span data-editor-id={`app/components/DashboardPage.tsx:199:20:${index}`}>
-                      +
-                      {card.color === "green"
-                        ? (data.yields * 100).toFixed(1)
-                        : (data.yields * data.froth * 100).toFixed(1)}
-                      % this month
-                    </span>
-                  </div>
-                )}
-
-                {card.color === "yellow" && (
-                  <p className="text-sm text-gray-600">
-                    <span data-editor-id={`app/components/DashboardPage.tsx:206:20:${index}`}>
-                      Available for expenses
-                    </span>
+                <div className="flex items-center space-x-2">
+                  <Icon icon="cryptocurrency:flow" className="text-blue-600" />
+                  <p className={`text-2xl font-semibold ${card.textColor}`}>
+                    {formatCurrency(card.amount)}
                   </p>
-                )}
+                </div>
               </div>
             </motion.div>
           ))}
         </div>
+
+        {/* User Address & Transaction History */}
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.7 }}
+          className="mb-8"
+        >
+          <div className="bg-white rounded-2xl shadow-lg p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-semibold text-gray-900 flex items-center space-x-2">
+                <Icon icon="material-symbols:history" className="text-xl text-gray-600" />
+                <span>Recent Transactions</span>
+                {fetchingTxHistory && (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b border-blue-600"></div>
+                )}
+              </h3>
+              {connectedAddress && (
+                <div className="text-sm text-gray-600 bg-gray-100 px-3 py-1 rounded-lg font-mono">
+                  {connectedAddress.slice(0, 8)}...{connectedAddress.slice(-6)}
+                </div>
+              )}
+            </div>
+
+            <div className="mb-6">
+              {fetchingTxHistory ? (
+                <div className="text-center py-8 text-gray-500">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+                  <p>Loading blockchain transactions...</p>
+                </div>
+              ) : transactionHistory.length > 0 ? (
+                <div className="space-y-3 max-h-60 overflow-y-auto">
+                  {transactionHistory.slice(0, 10).map((tx) => (
+                    <div
+                      key={tx.id}
+                      className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                    >
+                      <div className="flex items-center space-x-3">
+                        <div
+                          className={`w-3 h-3 rounded-full ${
+                            tx.status === "success"
+                              ? "bg-green-500"
+                              : tx.status === "failed"
+                              ? "bg-red-500"
+                              : "bg-yellow-500"
+                          }`}
+                        />
+                        <div>
+                          <div className="font-medium text-gray-900">
+                            {tx.type === "salary_split"
+                              ? "Salary Split"
+                              : tx.type === "compound"
+                              ? "Yield Compound"
+                              : "FLOW Token Transfer"}
+                          </div>
+                          <div className="text-sm text-gray-600">{tx.details}</div>
+                          {tx.txId && (
+                            <div className="text-xs text-blue-600 font-mono mt-1">
+                              <a
+                                href={`https://testnet.flowscan.org/transaction/${tx.txId}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="hover:underline"
+                              >
+                                {tx.txId.slice(0, 8)}...{tx.txId.slice(-8)} ↗
+                              </a>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="font-semibold text-gray-900">
+                          {tx.amount > 0 ? formatCurrency(tx.amount) : "—"}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {new Date(tx.timestamp).toLocaleString()}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  <Icon
+                    icon="material-symbols:history"
+                    className="mx-auto text-4xl mb-2 opacity-50"
+                  />
+                  <p>No transactions found</p>
+                  <p className="text-sm">
+                    {connectedAddress
+                      ? "Your blockchain transactions will appear here"
+                      : "Connect your wallet to see transaction history"}
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        </motion.div>
 
         {/* Quick Actions */}
         <motion.div

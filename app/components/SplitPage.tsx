@@ -1,8 +1,9 @@
 "use client";
 
-import { motion, AnimatePresence } from "framer-motion";
 import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { Icon } from "@iconify/react";
+import { useSeflowSalary } from "@/app/hooks/useSeflowContract";
 
 interface SplitPageProps {
   initialData?: {
@@ -13,20 +14,104 @@ interface SplitPageProps {
 }
 
 export default function SplitPage({
-  initialData = { savings: 25, deFi: 15, spending: 10 },
+  initialData = { savings: 40, deFi: 30, spending: 30 },
 }: SplitPageProps) {
   const [splits, setSplits] = useState(initialData);
+  const { setSplitConfig, isLoading, error, configPending } = useSeflowSalary();
   const [isLockVault, setIsLockVault] = useState(false);
   const [animatingTokens, setAnimatingTokens] = useState<
     Array<{ id: number; type: string; x: number; y: number }>
   >([]);
-  const [salaryAmount] = useState(10000000); // 10 million IDR sample
+  const [salaryAmount, setSalaryAmount] = useState(100); // Editable FLOW amount
+
+  // Manual loading state management for better UX
+  const [isManualLoading, setIsManualLoading] = useState(false);
+  const [showSuccessToast, setShowSuccessToast] = useState(false);
+  const [lastTransactionTime, setLastTransactionTime] = useState<number | null>(null);
 
   const totalAllocated = splits.savings + splits.deFi + splits.spending;
   const remaining = 100 - totalAllocated;
 
+  // Handle transaction with manual loading and success states
+  const handleTransactionSubmit = async () => {
+    setIsManualLoading(true);
+    setLastTransactionTime(Date.now());
+
+    try {
+      // Execute the transaction
+      await setSplitConfig(
+        splits.savings,
+        splits.deFi,
+        splits.spending,
+        isLockVault ? 1 : 0,
+        salaryAmount > 0
+      );
+
+      // Show success after a reasonable delay (10 seconds)
+      setTimeout(() => {
+        setIsManualLoading(false);
+        setShowSuccessToast(true);
+
+        // Hide success toast after 5 seconds
+        setTimeout(() => {
+          setShowSuccessToast(false);
+        }, 5000);
+      }, 10000);
+
+      console.log("🎉 Transaction submitted successfully!");
+    } catch (error) {
+      console.error("❌ Transaction failed:", error);
+      // On error, stop loading immediately
+      setIsManualLoading(false);
+    }
+  };
+
   const handleSliderChange = (type: keyof typeof splits, value: number) => {
-    setSplits((prev) => ({ ...prev, [type]: value }));
+    setSplits((prev) => {
+      const newSplits = { ...prev };
+
+      // Set the new value for the changed slider
+      newSplits[type] = value;
+
+      // Get the other two types
+      const otherTypes = Object.keys(newSplits).filter((key) => key !== type) as Array<
+        keyof typeof splits
+      >;
+
+      // Distribute the difference proportionally among the other sliders
+      const otherTotal = otherTypes.reduce((sum, key) => sum + newSplits[key], 0);
+
+      if (otherTotal > 0) {
+        // Calculate how much to adjust each other slider
+        const adjustmentRatio = Math.max(0, 100 - value) / otherTotal;
+
+        otherTypes.forEach((key) => {
+          newSplits[key] = Math.round(newSplits[key] * adjustmentRatio);
+        });
+
+        // Fine-tune to ensure exact 100% total
+        const currentTotal = Object.values(newSplits).reduce((sum, val) => sum + val, 0);
+        const finalAdjustment = 100 - currentTotal;
+
+        // Apply any small adjustment to the largest other slider
+        if (finalAdjustment !== 0) {
+          const largestOtherType = otherTypes.reduce((max, key) =>
+            newSplits[key] > newSplits[max] ? key : max
+          );
+          newSplits[largestOtherType] = Math.max(0, newSplits[largestOtherType] + finalAdjustment);
+        }
+      } else {
+        // If other sliders are at 0, distribute remaining evenly
+        const remainingPerSlider = Math.floor((100 - value) / otherTypes.length);
+        const remainder = (100 - value) % otherTypes.length;
+
+        otherTypes.forEach((key, index) => {
+          newSplits[key] = remainingPerSlider + (index < remainder ? 1 : 0);
+        });
+      }
+
+      return newSplits;
+    });
 
     // Trigger floating animation
     triggerTokenAnimation(type);
@@ -49,7 +134,7 @@ export default function SplitPage({
   };
 
   const calculateAmount = (percentage: number) => {
-    return ((salaryAmount * percentage) / 100).toLocaleString("id-ID");
+    return ((salaryAmount * percentage) / 100).toFixed(2);
   };
 
   return (
@@ -65,7 +150,7 @@ export default function SplitPage({
           <h1 className="text-3xl md:text-4xl font-light text-gray-900 mb-4">
             <span data-editor-id="app/components/SplitPage.tsx:66:12">Split Your Salary</span>
           </h1>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+          <p className="text-lg text-gray-600 max-w-2xl mx-auto mb-2">
             <span data-editor-id="app/components/SplitPage.tsx:69:12">
               Automatically allocate your salary across savings, DeFi investments, and spending.
               Drag the sliders to customize your split.
@@ -73,7 +158,7 @@ export default function SplitPage({
           </p>
         </motion.div>
 
-        {/* Salary Display */}
+        {/* Salary Input */}
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -81,13 +166,26 @@ export default function SplitPage({
           className="bg-white rounded-2xl shadow-lg p-6 mb-8 border-2 border-[#22C55E]/20"
         >
           <div className="text-center">
-            <p className="text-sm text-gray-500 mb-2">
-              <span data-editor-id="app/components/SplitPage.tsx:81:14">Monthly Salary</span>
+            <p className="text-sm text-gray-500 mb-4">
+              <span data-editor-id="app/components/SplitPage.tsx:81:14">Monthly Salary Amount</span>
             </p>
-            <p className="text-3xl font-medium text-gray-900">
-              <span data-editor-id="app/components/SplitPage.tsx:84:14">
-                Rp {salaryAmount.toLocaleString("id-ID")}
-              </span>
+            <div className="flex items-center justify-center space-x-4 max-w-md mx-auto">
+              <Icon icon="cryptocurrency:flow" className="text-2xl text-blue-600" />
+              <div className="flex-1">
+                <input
+                  type="number"
+                  value={salaryAmount}
+                  onChange={(e) => setSalaryAmount(Math.max(0, parseFloat(e.target.value) || 0))}
+                  min="0"
+                  step="0.1"
+                  className="w-full text-2xl font-medium text-gray-900 text-center border-2 border-gray-200 rounded-xl px-4 py-2 focus:border-[#22C55E] focus:outline-none transition-colors"
+                  placeholder="100.0"
+                />
+              </div>
+              <span className="text-2xl font-medium text-gray-900">FLOW</span>
+            </div>
+            <p className="text-xs text-gray-400 mt-2">
+              Enter the amount you want to split across your allocations
             </p>
           </div>
         </motion.div>
@@ -146,9 +244,10 @@ export default function SplitPage({
                   <h3 className="text-lg font-medium text-gray-900">
                     <span data-editor-id="app/components/SplitPage.tsx:127:20">Savings</span>
                   </h3>
-                  <p className="text-sm text-gray-500">
+                  <p className="text-sm text-gray-500 flex items-center space-x-1">
+                    <Icon icon="cryptocurrency:flow" className="text-sm text-blue-600" />
                     <span data-editor-id="app/components/SplitPage.tsx:130:20">
-                      Rp {calculateAmount(splits.savings)}
+                      {calculateAmount(splits.savings)} FLOW
                     </span>
                   </p>
                 </div>
@@ -186,9 +285,10 @@ export default function SplitPage({
                       DeFi Investments
                     </span>
                   </h3>
-                  <p className="text-sm text-gray-500">
+                  <p className="text-sm text-gray-500 flex items-center space-x-1">
+                    <Icon icon="cryptocurrency:flow" className="text-sm text-blue-600" />
                     <span data-editor-id="app/components/SplitPage.tsx:162:20">
-                      Rp {calculateAmount(splits.deFi)}
+                      {calculateAmount(splits.deFi)} FLOW
                     </span>
                   </p>
                 </div>
@@ -227,9 +327,10 @@ export default function SplitPage({
                   <h3 className="text-lg font-medium text-gray-900">
                     <span data-editor-id="app/components/SplitPage.tsx:191:20">Spending</span>
                   </h3>
-                  <p className="text-sm text-gray-500">
+                  <p className="text-sm text-gray-500 flex items-center space-x-1">
+                    <Icon icon="cryptocurrency:flow" className="text-sm text-blue-600" />
                     <span data-editor-id="app/components/SplitPage.tsx:194:20">
-                      Rp {calculateAmount(splits.spending)}
+                      {calculateAmount(splits.spending)} FLOW
                     </span>
                   </p>
                 </div>
@@ -312,13 +413,19 @@ export default function SplitPage({
             <div className="text-center">
               <p
                 className={`text-2xl font-semibold ${
-                  remaining >= 0 ? "text-green-600" : "text-red-600"
+                  remaining === 0
+                    ? "text-green-600"
+                    : remaining > 0
+                    ? "text-yellow-600"
+                    : "text-red-600"
                 }`}
               >
                 {remaining}%
               </p>
               <p className="text-sm text-gray-500">
-                <span data-editor-id="app/components/SplitPage.tsx:263:16">Remaining</span>
+                <span data-editor-id="app/components/SplitPage.tsx:263:16">
+                  {remaining === 0 ? "Perfect!" : "Remaining"}
+                </span>
               </p>
             </div>
             <div className="text-center">
@@ -346,17 +453,106 @@ export default function SplitPage({
           <motion.button
             whileHover={{ scale: 1.05, boxShadow: "0 10px 25px -5px rgba(34, 197, 94, 0.4)" }}
             whileTap={{ scale: 0.95 }}
-            disabled={remaining < 0}
-            className={`px-8 py-4 rounded-xl text-lg font-medium transition-all duration-300 shadow-lg ${
-              remaining >= 0
-                ? "bg-[#22C55E] hover:bg-green-600 text-white cursor-pointer"
-                : "bg-gray-300 text-gray-500 cursor-not-allowed"
+            onClick={handleTransactionSubmit}
+            disabled={
+              isManualLoading || configPending || isLoading || remaining !== 0 || salaryAmount <= 0
+            }
+            className={`px-8 py-4 rounded-xl text-lg font-medium transition-all duration-300 shadow-lg flex items-center space-x-2 mx-auto ${
+              isManualLoading || configPending || isLoading || remaining !== 0 || salaryAmount <= 0
+                ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                : "bg-[#22C55E] hover:bg-green-600 text-white cursor-pointer"
             }`}
           >
-            <span data-editor-id="app/components/SplitPage.tsx:292:12">
-              {remaining >= 0 ? "Apply Split Configuration" : "Adjust Allocation (Over 100%)"}
-            </span>
+            {isManualLoading || configPending ? (
+              <>
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                <span>
+                  {isManualLoading
+                    ? "Processing on Flow Blockchain..."
+                    : "Processing Transaction..."}
+                </span>
+              </>
+            ) : (
+              <>
+                <Icon icon="cryptocurrency:flow" className="text-xl" />
+                <span data-editor-id="app/components/SplitPage.tsx:330:16">
+                  {salaryAmount <= 0
+                    ? "Enter salary amount"
+                    : remaining === 0
+                    ? `Split ${salaryAmount.toFixed(1)} FLOW`
+                    : remaining > 0
+                    ? `Allocate remaining ${remaining}%`
+                    : "Reduce allocation (Over 100%)"}
+                </span>
+              </>
+            )}
           </motion.button>
+
+          {salaryAmount <= 0 && (
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="text-yellow-600 text-sm text-center mt-4"
+            >
+              Please enter a valid salary amount greater than 0 FLOW
+            </motion.p>
+          )}
+
+          {remaining !== 0 && salaryAmount > 0 && (
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className={`text-sm text-center mt-4 ${
+                remaining > 0 ? "text-yellow-600" : "text-red-600"
+              }`}
+            >
+              {remaining > 0
+                ? `You have ${remaining}% unallocated. Please adjust your splits to total 100%.`
+                : `You're over by ${Math.abs(
+                    remaining
+                  )}%. Please reduce your allocations to total 100%.`}
+            </motion.p>
+          )}
+
+          {remaining === 0 && salaryAmount > 0 && (
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="text-green-600 text-sm text-center mt-4"
+            >
+              Ready to split! Will deduct{" "}
+              {((salaryAmount * (splits.savings + splits.deFi)) / 100).toFixed(2)} FLOW (keeping{" "}
+              {((salaryAmount * splits.spending) / 100).toFixed(2)} FLOW for spending)
+            </motion.p>
+          )}
+
+          {error && (
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="text-red-500 text-sm text-center mt-2"
+            >
+              Error: {error.message}
+            </motion.p>
+          )}
+
+          {/* Success Toast */}
+          {showSuccessToast && (
+            <motion.div
+              initial={{ opacity: 0, y: 20, scale: 0.9 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -20, scale: 0.9 }}
+              className="fixed top-20 right-4 bg-green-600 text-white px-6 py-4 rounded-xl shadow-lg flex items-center space-x-3 z-50"
+            >
+              <Icon icon="material-symbols:check-circle" className="text-2xl" />
+              <div>
+                <p className="font-semibold">Transaction Successful! 🎉</p>
+                <p className="text-sm opacity-90">
+                  Your {salaryAmount.toFixed(1)} FLOW has been split successfully
+                </p>
+              </div>
+            </motion.div>
+          )}
         </motion.div>
       </div>
 

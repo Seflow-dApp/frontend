@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import { Icon } from "@iconify/react";
-import { useAuth } from "@/app/contexts/AuthContext";
+import { useAuth } from "@/app/contexts/FlowAuthContext";
 import { useState } from "react";
 
 export default function LoginPrompt() {

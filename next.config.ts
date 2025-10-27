@@ -26,6 +26,11 @@ const nextConfig: NextConfig = {
         ],
     },
     allowedDevOrigins: ['app-cosmic.com', '*.app-cosmic.com', 'vibecode.net', '*.vibecode.net'],
+    compiler: {
+        removeConsole: {
+            exclude: ['error', 'warn'],
+        }
+    }
 };
 
 export default nextConfig;

@@ -3,7 +3,8 @@
 import { Icon } from "@iconify/react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState } from "react";
-import { useAuth } from "@/app/contexts/AuthContext";
+import { useAuth } from "@/app/contexts/FlowAuthContext";
+import { formatWalletAddress } from "@/lib/utils";
 
 interface NavbarProps {
   activeTab?: "home" | "split" | "dashboard" | "about";
@@ -96,9 +97,7 @@ export default function Navbar({ activeTab = "home", onTabChange }: NavbarProps)
               className="hidden md:flex items-center space-x-2 bg-[#22C55E] hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 shadow-md cursor-pointer"
             >
               <Icon icon="material-symbols:account-balance-wallet" className="text-lg" />
-              <span className="max-w-20 truncate">
-                {walletAddress?.slice(0, 6)}...{walletAddress?.slice(-4)}
-              </span>
+              <span>{formatWalletAddress(walletAddress)}</span>
             </motion.button>
           )}
 
@@ -162,9 +161,7 @@ export default function Navbar({ activeTab = "home", onTabChange }: NavbarProps)
                   className="flex items-center space-x-3 w-full px-4 py-3 bg-[#22C55E] hover:bg-green-600 text-white rounded-lg transition-all duration-200 cursor-pointer"
                 >
                   <Icon icon="material-symbols:account-balance-wallet" className="text-lg" />
-                  <span>
-                    {walletAddress?.slice(0, 6)}...{walletAddress?.slice(-4)}
-                  </span>
+                  <span>{formatWalletAddress(walletAddress)}</span>
                 </motion.button>
               )}
             </div>
