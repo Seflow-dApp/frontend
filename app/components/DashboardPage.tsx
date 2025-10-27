@@ -1,9 +1,10 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Icon } from "@iconify/react";
 import { useSeflowSalary } from "@/app/hooks/useSeflowContract";
+import { useAutoCompound } from "@/app/lib/hooks/useAutoCompound";
 
 interface DashboardData {
   savings: number;
@@ -23,6 +24,21 @@ export default function DashboardPage({}: DashboardPageProps) {
     []
   );
   const [recentlyClaimedYield, setRecentlyClaimedYield] = useState(false);
+
+  // Auto-compound scheduling state
+  const [autoCompoundEnabled, setAutoCompoundEnabled] = useState(false);
+  const [autoCompoundInterval, setAutoCompoundInterval] = useState(7); // days
+  const [nextCompoundTime, setNextCompoundTime] = useState<Date | null>(null);
+  const [showAutoCompoundSuccess, setShowAutoCompoundSuccess] = useState(false);
+
+  // Auto-compound hook
+  const {
+    enableAutoCompound,
+    checkAutoCompoundStatus,
+    isLoading: autoCompoundLoading,
+    error: autoCompoundError,
+    txId: autoCompoundTxId,
+  } = useAutoCompound();
 
   // Get real contract data including FROTH and enhanced info
   const {
@@ -83,7 +99,69 @@ export default function DashboardPage({}: DashboardPageProps) {
     }
   }, [compoundTxId, compoundPending, connectedAddress]);
 
-  // Check if yield was recently claimed (persists across refreshes)
+  // Handle auto-compound transaction success
+  useEffect(() => {
+    if (autoCompoundTxId && !autoCompoundLoading) {
+      console.log("✅ Auto-compound setup successful! TxId:", autoCompoundTxId);
+      setShowAutoCompoundSuccess(true);
+
+      // Clear success message after 5 seconds
+      setTimeout(() => {
+        setShowAutoCompoundSuccess(false);
+      }, 5000);
+    }
+  }, [autoCompoundTxId, autoCompoundLoading]);
+
+  // Check auto-compound status on load and address change
+  useEffect(() => {
+    const checkStatus = async () => {
+      if (connectedAddress) {
+        try {
+          // First check blockchain state
+          const status = await checkAutoCompoundStatus(connectedAddress);
+          const isEnabledOnChain = status.handlerExists && status.handlerCapabilityExists;
+
+          // Then check localStorage for additional info
+          const localEnabled =
+            localStorage.getItem(`autoCompoundEnabled_${connectedAddress}`) === "true";
+          const lastScheduledTime = localStorage.getItem(`autoCompoundTime_${connectedAddress}`);
+
+          // Use blockchain state as source of truth, but localStorage for timing
+          const isEnabled = isEnabledOnChain || localEnabled;
+
+          console.log("Auto-compound status check:", {
+            chainStatus: status,
+            isEnabledOnChain,
+            localEnabled,
+            finalEnabled: isEnabled,
+          });
+
+          setAutoCompoundEnabled(isEnabled);
+
+          // Set next compound time from localStorage if available
+          if (isEnabled && lastScheduledTime) {
+            setNextCompoundTime(new Date(parseInt(lastScheduledTime)));
+          } else if (!isEnabled) {
+            setNextCompoundTime(null);
+          }
+        } catch (error) {
+          console.error("Error checking auto-compound status:", error);
+
+          // Fallback to localStorage only
+          const localEnabled =
+            localStorage.getItem(`autoCompoundEnabled_${connectedAddress}`) === "true";
+          const lastScheduledTime = localStorage.getItem(`autoCompoundTime_${connectedAddress}`);
+
+          setAutoCompoundEnabled(localEnabled);
+          if (localEnabled && lastScheduledTime) {
+            setNextCompoundTime(new Date(parseInt(lastScheduledTime)));
+          }
+        }
+      }
+    };
+
+    checkStatus();
+  }, [connectedAddress, checkAutoCompoundStatus]); // Check if yield was recently claimed (persists across refreshes)
   const checkRecentClaim = () => {
     if (!connectedAddress) return false;
 
@@ -479,6 +557,244 @@ export default function DashboardPage({}: DashboardPageProps) {
             </motion.div>
           ))}
         </div>
+
+        {/* Auto-Compound Scheduling Section */}
+        {balances.deFi > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.6 }}
+            className="bg-linear-to-br from-purple-50 to-blue-50 rounded-2xl shadow-lg p-8 mb-8 border border-purple-100"
+          >
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center space-x-4">
+                <div className="w-12 h-12 bg-purple-500 rounded-xl flex items-center justify-center shadow-md">
+                  <Icon icon="material-symbols:schedule" className="text-2xl text-white" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-medium text-gray-900">Auto-Compound Scheduler</h2>
+                  <p className="text-gray-600">
+                    Schedule automatic yield compounding using Flow's innovative scheduled
+                    transactions
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div
+                  className={`w-3 h-3 rounded-full ${
+                    autoCompoundEnabled ? "bg-green-500" : "bg-gray-400"
+                  }`}
+                ></div>
+                <span className="text-sm text-gray-600">
+                  {autoCompoundEnabled ? "Active" : "Inactive"}
+                </span>
+              </div>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-6">
+              {/* Settings Panel */}
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-800 mb-3">
+                    <Icon icon="mdi:clock-outline" className="inline mr-2 text-purple-600" />
+                    Compounding Frequency
+                  </label>
+                  <div className="relative">
+                    <select
+                      value={autoCompoundInterval}
+                      onChange={(e) => setAutoCompoundInterval(parseInt(e.target.value))}
+                      className="w-full px-4 py-3 pr-10 bg-white border-2 border-gray-200 rounded-xl text-gray-700 font-medium shadow-sm hover:border-purple-300 focus:border-purple-500 focus:ring-4 focus:ring-purple-100 transition-all duration-200 appearance-none cursor-pointer"
+                    >
+                      <option value={1} className="py-2">
+                        Daily (24 hours)
+                      </option>
+                      <option value={3} className="py-2">
+                        Every 3 days
+                      </option>
+                      <option value={7} className="py-2">
+                        Weekly (7 days)
+                      </option>
+                      <option value={14} className="py-2">
+                        Bi-weekly (14 days)
+                      </option>
+                      <option value={30} className="py-2">
+                        Monthly (30 days)
+                      </option>
+                    </select>
+                    <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                      <Icon icon="mdi:chevron-down" className="text-gray-400 text-xl" />
+                    </div>
+                  </div>
+                  <p className="mt-2 text-xs text-gray-500 flex items-center">
+                    <Icon icon="mdi:information-outline" className="mr-1" />
+                    More frequent compounding = higher yields but more transaction fees
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Estimated Fee per Transaction
+                  </label>
+                  <div className="flex items-center space-x-2 text-sm text-gray-600">
+                    <Icon icon="cryptocurrency:flow" className="text-blue-500" />
+                    <span>~0.001 FLOW</span>
+                    <span className="text-xs">(Dynamic based on network)</span>
+                  </div>
+                </div>
+
+                {nextCompoundTime && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Next Compound Scheduled
+                    </label>
+                    <div className="text-sm text-purple-600 font-medium">
+                      {nextCompoundTime.toLocaleString()}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Action Panel */}
+              <div className="flex flex-col justify-center space-y-4">
+                <div className="text-center p-4 bg-white rounded-lg border border-gray-200">
+                  <div className="flex items-center justify-center space-x-2 mb-2">
+                    <Icon icon="material-symbols:robot" className="text-purple-500 text-2xl" />
+                    <span className="text-lg font-medium text-gray-900">Autonomous DeFi</span>
+                  </div>
+                  <p className="text-sm text-gray-600 mb-4">
+                    Your LP yield will be automatically compounded without any manual intervention
+                  </p>
+
+                  {!autoCompoundEnabled ? (
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={async () => {
+                        if (connectedAddress && !autoCompoundLoading) {
+                          try {
+                            console.log("Setting up auto-compound...");
+                            await enableAutoCompound(autoCompoundInterval);
+                            setAutoCompoundEnabled(true);
+
+                            const nextTime = new Date(
+                              Date.now() + autoCompoundInterval * 24 * 60 * 60 * 1000
+                            );
+                            setNextCompoundTime(nextTime);
+
+                            // Save to localStorage for persistence
+                            localStorage.setItem(
+                              `autoCompoundTime_${connectedAddress}`,
+                              nextTime.getTime().toString()
+                            );
+                            localStorage.setItem(`autoCompoundEnabled_${connectedAddress}`, "true");
+
+                            console.log("Auto-compound enabled successfully!");
+                          } catch (error) {
+                            console.error("Failed to enable auto-compound:", error);
+                          }
+                        }
+                      }}
+                      disabled={autoCompoundLoading || !connectedAddress}
+                      className="cursor-pointer w-full px-6 py-3 bg-linear-to-r from-purple-500 to-blue-500 text-white rounded-lg font-medium hover:from-purple-600 hover:to-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <div className="flex items-center justify-center space-x-2">
+                        {autoCompoundLoading ? (
+                          <>
+                            <div className="animate-spin rounded-full h-4 w-4 border-b border-white"></div>
+                            <span>Setting up...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Icon icon="material-symbols:play-arrow" />
+                            <span>Enable Auto-Compound</span>
+                          </>
+                        )}
+                      </div>
+                    </motion.button>
+                  ) : (
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => {
+                        // This would call the cancel transaction
+                        setAutoCompoundEnabled(false);
+                        setNextCompoundTime(null);
+
+                        // Clear localStorage
+                        if (connectedAddress) {
+                          localStorage.removeItem(`autoCompoundTime_${connectedAddress}`);
+                          localStorage.removeItem(`autoCompoundEnabled_${connectedAddress}`);
+                        }
+                      }}
+                      className="cursor-pointer w-full px-6 py-3 bg-linear-to-r from-red-500 to-pink-500 text-white rounded-lg font-medium hover:from-red-600 hover:to-pink-600 transition-colors"
+                    >
+                      <div className="flex items-center justify-center space-x-2">
+                        <Icon icon="material-symbols:stop" />
+                        <span>Disable Auto-Compound</span>
+                      </div>
+                    </motion.button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Error Display */}
+            {autoCompoundError && (
+              <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+                <div className="flex items-start space-x-3">
+                  <Icon icon="material-symbols:error" className="text-red-500 text-xl mt-0.5" />
+                  <div className="text-sm">
+                    <p className="text-red-800 font-medium mb-1">Auto-Compound Setup Error</p>
+                    <p className="text-red-700">{autoCompoundError}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Success Display */}
+            {showAutoCompoundSuccess && autoCompoundTxId && (
+              <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+                <div className="flex items-start space-x-3">
+                  <Icon
+                    icon="material-symbols:check-circle"
+                    className="text-green-500 text-xl mt-0.5"
+                  />
+                  <div className="text-sm">
+                    <p className="text-green-800 font-medium mb-1">Auto-Compound Enabled!</p>
+                    <p className="text-green-700">
+                      Transaction ID:{" "}
+                      <a
+                        href={`https://testnet.flowscan.io/tx/${autoCompoundTxId}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="underline hover:no-underline"
+                      >
+                        {autoCompoundTxId.slice(0, 8)}...{autoCompoundTxId.slice(-8)}
+                      </a>
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Info Banner */}
+            <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="flex items-start space-x-3">
+                <Icon icon="material-symbols:info" className="text-blue-500 text-xl mt-0.5" />
+                <div className="text-sm">
+                  <p className="text-blue-800 font-medium mb-1">
+                    Powered by Flow Scheduled Transactions (Experimental)
+                  </p>
+                  <p className="text-blue-700">
+                    This feature uses Flow's cutting-edge scheduled transaction system to
+                    automatically execute yield compounding on the blockchain without requiring
+                    external services or manual intervention.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
 
         {/* User Address & Transaction History */}
         <motion.div

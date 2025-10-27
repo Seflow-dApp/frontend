@@ -242,7 +242,7 @@ export default function SplitPage({
                 </div>
                 <div>
                   <h3 className="text-lg font-medium text-gray-900">
-                    <span data-editor-id="app/components/SplitPage.tsx:127:20">Savings</span>
+                    <span data-editor-id="app/components/SplitPage.tsx:127:20">Savings (Vault)</span>
                   </h3>
                   <p className="text-sm text-gray-500 flex items-center space-x-1">
                     <Icon icon="cryptocurrency:flow" className="text-sm text-blue-600" />
@@ -298,7 +298,7 @@ export default function SplitPage({
                 <div>
                   <h3 className="text-lg font-medium text-gray-900">
                     <span data-editor-id="app/components/SplitPage.tsx:159:20">
-                      DeFi Investments
+                      DeFi Investments (Liquidity Pool)
                     </span>
                   </h3>
                   <p className="text-sm text-gray-500 flex items-center space-x-1">
@@ -357,7 +357,7 @@ export default function SplitPage({
                 </div>
                 <div>
                   <h3 className="text-lg font-medium text-gray-900">
-                    <span data-editor-id="app/components/SplitPage.tsx:191:20">Spending</span>
+                    <span data-editor-id="app/components/SplitPage.tsx:191:20">Spending (Wallet)</span>
                   </h3>
                   <p className="text-sm text-gray-500 flex items-center space-x-1">
                     <Icon icon="cryptocurrency:flow" className="text-sm text-blue-600" />
@@ -451,7 +451,7 @@ export default function SplitPage({
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center space-x-4">
               <div className="w-12 h-12 bg-linear-to-r from-purple-500 to-pink-500 rounded-xl flex items-center justify-center">
-                <Icon icon="cryptocurrency:frax-share" className="text-2xl text-white" />
+                <Icon icon="material-symbols:token" className="text-2xl text-white" />
               </div>
               <div>
                 <h3 className="text-lg font-medium text-gray-900 flex items-center space-x-2">

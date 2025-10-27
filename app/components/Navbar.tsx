@@ -17,6 +17,7 @@ export default function Navbar() {
   const navItems = isConnected
     ? [
         { id: "home", label: "Home", icon: "material-symbols:home", href: "/home" },
+        { id: "about", label: "About", icon: "material-symbols:info", href: "/about" },
         { id: "split", label: "Split", icon: "lucide:split", href: "/split" },
         {
           id: "dashboard",
@@ -24,7 +25,6 @@ export default function Navbar() {
           icon: "material-symbols:dashboard",
           href: "/dashboard",
         },
-        { id: "about", label: "About", icon: "material-symbols:info", href: "/about" },
       ]
     : [
         { id: "home", label: "Home", icon: "material-symbols:home", href: "/home" },
