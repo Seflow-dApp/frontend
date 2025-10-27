@@ -22,23 +22,33 @@ export default function DashboardPage({}: DashboardPageProps) {
   const [animatingCoins, setAnimatingCoins] = useState<Array<{ id: number; x: number; y: number }>>(
     []
   );
+  const [recentlyClaimedYield, setRecentlyClaimedYield] = useState(false);
 
-  // Get real contract data
+  // Get real contract data including FROTH and enhanced info
   const {
     getUserData,
+    getSavingsInfo,
+    getLPInfo,
     isLoading: contractLoading,
     refreshData,
     transactionHistory,
     fetchingTxHistory,
     connectedAddress,
     error: contractError,
+    handleCompound,
+    compoundPending,
+    compoundTxId,
   } = useSeflowSalary();
   const realUserData = getUserData();
+  const savingsInfo = getSavingsInfo();
+  const lpInfo = getLPInfo();
 
   // Debug logging
   console.log("🎯 Dashboard - contractLoading:", contractLoading);
   console.log("🎯 Dashboard - contractError:", contractError);
   console.log("🎯 Dashboard - realUserData:", realUserData);
+  console.log("🎯 Dashboard - savingsInfo:", savingsInfo);
+  console.log("🎯 Dashboard - lpInfo:", lpInfo);
   console.log("🎯 Dashboard - connectedAddress:", connectedAddress);
 
   // Auto-refresh data every 30 seconds for live updates
@@ -49,7 +59,47 @@ export default function DashboardPage({}: DashboardPageProps) {
     }, 30000); // 30 seconds
 
     return () => clearInterval(interval);
-  }, [refreshData]);
+  }, []); // Remove refreshData from dependencies to prevent restarts
+
+  // Handle compound transaction success
+  useEffect(() => {
+    if (compoundTxId && !compoundPending) {
+      console.log("✅ Yield compound successful! TxId:", compoundTxId);
+
+      // Store the last claim time in localStorage
+      const now = Date.now();
+      localStorage.setItem(`lastYieldClaim_${connectedAddress}`, now.toString());
+      setRecentlyClaimedYield(true);
+
+      // Refresh data to show updated balances
+      setTimeout(() => {
+        refreshData();
+      }, 2000); // Wait 2 seconds for blockchain to process
+
+      // Clear the recently claimed flag after 30 seconds
+      setTimeout(() => {
+        setRecentlyClaimedYield(false);
+      }, 30000); // Extended to 30 seconds
+    }
+  }, [compoundTxId, compoundPending, connectedAddress]);
+
+  // Check if yield was recently claimed (persists across refreshes)
+  const checkRecentClaim = () => {
+    if (!connectedAddress) return false;
+
+    const lastClaimTime = localStorage.getItem(`lastYieldClaim_${connectedAddress}`);
+    if (!lastClaimTime) return false;
+
+    const timeSinceLastClaim = Date.now() - parseInt(lastClaimTime);
+    const thirtySecondsInMs = 30 * 1000;
+
+    return timeSinceLastClaim < thirtySecondsInMs;
+  };
+
+  // Minimum yield threshold to show (0.01 FLOW = 1 cent)
+  const minimumYieldThreshold = 1;
+  const isYieldMeaningful = lpInfo.availableYield >= minimumYieldThreshold;
+  const wasRecentlyClaimed = recentlyClaimedYield || checkRecentClaim(); // Remove refreshData from dependencies
 
   // Use real balances - always show real FLOW balance, 0 for savings/LP if no transactions
   console.log("🔍 Debug realUserData:", realUserData);
@@ -72,12 +122,17 @@ export default function DashboardPage({}: DashboardPageProps) {
     savings: parseFloat(String(realUserData.savingsBalance)) || 0,
     deFi: parseFloat(String(realUserData.lpBalance)) || 0,
     spending: parseFloat(String(realUserData.flowBalance)) || 0,
+    froth: parseFloat(String(realUserData.frothBalance)) || 0,
   };
 
   console.log("🔍 Debug converted balances:", balances);
 
   const totalBalance = Number(balances.savings + balances.deFi + balances.spending) || 0;
-  const totalGains = 0; // Will show actual yields when Seflow contracts implement yield tracking
+  // Calculate actual gains from LP yield and potential savings interest
+  const totalGains = Number(lpInfo.availableYield + (lpInfo.totalYieldEarned || 0)) || 0;
+
+  // Only show yields banner if yield is meaningful and not recently claimed
+  const hasYields = isYieldMeaningful && !wasRecentlyClaimed;
 
   // Animate coins periodically
   useEffect(() => {
@@ -106,10 +161,25 @@ export default function DashboardPage({}: DashboardPageProps) {
     return `${amount.toFixed(2)} FLOW`;
   };
 
+  const formatFroth = (amount: number | undefined | null) => {
+    if (typeof amount !== "number" || isNaN(amount)) {
+      return "0.00 FROTH";
+    }
+    return `${amount.toFixed(2)} FROTH`;
+  };
+
+  const formatDays = (remainingTime: number) => {
+    const days = Math.ceil(remainingTime / 86400);
+    return days > 0 ? `${days} days left` : "Unlocked";
+  };
+
   const cards = [
     {
       title: "Savings Balance",
       amount: balances.savings,
+      subtitle: savingsInfo.isLocked
+        ? `🔒 ${formatDays(savingsInfo.remainingTime)}`
+        : "💸 Available",
       icon: "material-symbols:savings",
       color: "green",
       bgColor: "bg-linear-to-br from-green-50 to-green-100",
@@ -120,6 +190,12 @@ export default function DashboardPage({}: DashboardPageProps) {
     {
       title: "DeFi Investments",
       amount: balances.deFi,
+      subtitle:
+        isYieldMeaningful && !wasRecentlyClaimed
+          ? `💰 ${lpInfo.availableYield.toFixed(2)} FLOW yield ready`
+          : wasRecentlyClaimed
+          ? "✅ Yield claimed successfully!"
+          : "📈 Earning 1% weekly",
       icon: "mdi:chart-line",
       color: "blue",
       bgColor: "bg-linear-to-br from-blue-50 to-blue-100",
@@ -130,12 +206,25 @@ export default function DashboardPage({}: DashboardPageProps) {
     {
       title: "Spending Wallet",
       amount: balances.spending,
+      subtitle: "💳 Available for spending",
       icon: "material-symbols:shopping-cart",
       color: "yellow",
       bgColor: "bg-linear-to-br from-yellow-50 to-yellow-100",
       iconBg: "bg-yellow-500",
       textColor: "text-yellow-600",
       accentColor: "border-yellow-200",
+    },
+    {
+      title: "FROTH Rewards",
+      amount: balances.froth,
+      subtitle: "🎉 Earned from salary splits",
+      icon: "material-symbols:token",
+      color: "purple",
+      bgColor: "bg-linear-to-br from-purple-50 to-purple-100",
+      iconBg: "bg-purple-500",
+      textColor: "text-purple-600",
+      accentColor: "border-purple-200",
+      isToken: true, // Flag to show different formatting
     },
   ];
 
@@ -178,7 +267,7 @@ export default function DashboardPage({}: DashboardPageProps) {
               whileTap={{ scale: 0.95 }}
               onClick={refreshData}
               disabled={contractLoading}
-              className="p-2 bg-blue-100 hover:bg-blue-200 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="cursor-pointer p-2 bg-blue-100 hover:bg-blue-200 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               title="Refresh data from blockchain"
             >
               <Icon
@@ -194,8 +283,8 @@ export default function DashboardPage({}: DashboardPageProps) {
           </p>
         </motion.div>
 
-        {/* Yields Compounded Banner */}
-        {showYieldsBanner && (
+        {/* Yields Compounded Banner - Only show if there are actual yields */}
+        {showYieldsBanner && hasYields && (
           <motion.div
             initial={{ opacity: 0, y: -50, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -226,25 +315,60 @@ export default function DashboardPage({}: DashboardPageProps) {
                   <div>
                     <h2 className="text-2xl font-medium mb-1">
                       <span data-editor-id="app/components/DashboardPage.tsx:130:22">
-                        🎉 Yields Compounded!
+                        {lpInfo.availableYield > 0
+                          ? "💰 Yield Ready to Claim!"
+                          : "🎉 Yields Compounded!"}
                       </span>
                     </h2>
                     <p className="text-green-100">
                       <span data-editor-id="app/components/DashboardPage.tsx:133:22">
-                        You&apos;ve earned {formatCurrency(totalGains)} this month
+                        {lpInfo.availableYield > 0
+                          ? `${formatCurrency(lpInfo.availableYield)} available to claim`
+                          : `You've earned ${formatCurrency(totalGains)} total`}
                       </span>
                     </p>
                   </div>
                 </div>
 
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => setShowYieldsBanner(false)}
-                  className="w-8 h-8 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center transition-colors cursor-pointer"
-                >
-                  <Icon icon="material-symbols:close" className="text-white" />
-                </motion.button>
+                <div className="flex items-center space-x-3">
+                  {/* Claim Yield Button - Only show when yield is available */}
+                  {lpInfo.availableYield > 0 && (
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => {
+                        if (connectedAddress) {
+                          handleCompound(connectedAddress);
+                        }
+                      }}
+                      disabled={compoundPending || !connectedAddress}
+                      className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg text-white font-medium transition-colors cursor-pointer border border-white/30 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <div className="flex items-center space-x-2">
+                        {compoundPending ? (
+                          <>
+                            <div className="animate-spin rounded-full h-4 w-4 border-b border-white"></div>
+                            <span>Claiming...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Icon icon="material-symbols:download" className="text-lg" />
+                            <span>Claim Yield</span>
+                          </>
+                        )}
+                      </div>
+                    </motion.button>
+                  )}
+
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => setShowYieldsBanner(false)}
+                    className="w-8 h-8 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center transition-colors cursor-pointer"
+                  >
+                    <Icon icon="material-symbols:close" className="text-white" />
+                  </motion.button>
+                </div>
               </div>
             </div>
           </motion.div>
@@ -312,7 +436,7 @@ export default function DashboardPage({}: DashboardPageProps) {
         </motion.div>
 
         {/* Balance Cards Grid */}
-        <div className="grid md:grid-cols-3 gap-8 mb-8">
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           {cards.map((card, index) => (
             <motion.div
               key={card.title}
@@ -338,11 +462,19 @@ export default function DashboardPage({}: DashboardPageProps) {
 
               <div className="space-y-2">
                 <div className="flex items-center space-x-2">
-                  <Icon icon="cryptocurrency:flow" className="text-blue-600" />
+                  <Icon
+                    icon={card.isToken ? "cryptocurrency:frax-share" : "cryptocurrency:flow"}
+                    className={card.isToken ? "text-purple-600" : "text-blue-600"}
+                  />
                   <p className={`text-2xl font-semibold ${card.textColor}`}>
-                    {formatCurrency(card.amount)}
+                    {card.isToken ? formatFroth(card.amount) : formatCurrency(card.amount)}
                   </p>
                 </div>
+                {card.subtitle && (
+                  <p className="text-sm text-gray-600 flex items-center space-x-1">
+                    <span>{card.subtitle}</span>
+                  </p>
+                )}
               </div>
             </motion.div>
           ))}

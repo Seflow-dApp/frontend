@@ -18,9 +18,27 @@ interface UserData {
     frothBalance: number;
 }
 
+interface SavingsInfo {
+    balance: number;
+    lockTime: number;
+    unlockTime: number;
+    remainingTime: number;
+    isLocked: number;
+}
+
+interface LPInfo {
+    balance: number;
+    totalYieldEarned: number;
+    availableYield: number;
+    lastCompoundTime: number;
+    weeksSinceLastCompound: number;
+}
+
 interface SeflowData {
     contractStats: ContractStats;
     userData: UserData;
+    savingsInfo?: SavingsInfo;
+    lpInfo?: LPInfo;
     timestamp: number;
 }
 
@@ -110,6 +128,7 @@ export const useSeflowSalary = (userAddress?: string) => {
             // Read REAL on-chain balances from deployed contracts
             import FungibleToken from 0x9a0766d93b6608b7
             import FlowToken from 0x7e60df042a9c0868
+            import FrothToken from 0x7d7f281847222367
             import SavingsVault from 0x7d7f281847222367
             import LiquidityPool from 0x7d7f281847222367
             import Seflow from 0x7d7f281847222367
@@ -129,25 +148,36 @@ export const useSeflowSalary = (userAddress?: string) => {
 
                 // 2. Get REAL Savings balance from user's SavingsVault (if they have one)
                 var savingsBalance: UFix64 = 0.0
-                // Try to borrow user's savings vault from their storage
+                var savingsLockInfo: {String: UFix64} = {}
                 if let savingsVaultRef = account.capabilities.get<&SavingsVault.Vault>(/public/savingsVault).borrow() {
                     savingsBalance = savingsVaultRef.getBalance()
+                    savingsLockInfo = savingsVaultRef.getLockInfo()
                     log("💾 Real Savings balance: ".concat(savingsBalance.toString()))
+                    log("🔒 Savings lock info retrieved")
                 } else {
                     log("ℹ️ User has no SavingsVault or no public capability")
                 }
 
                 // 3. Get REAL LP balance from user's LiquidityPool position (if they have one)
                 var lpBalance: UFix64 = 0.0
+                var lpPositionInfo: {String: UFix64} = {}
                 if let lpVaultRef = account.capabilities.get<&LiquidityPool.Vault>(/public/liquidityPoolVault).borrow() {
                     lpBalance = lpVaultRef.getBalance()
+                    lpPositionInfo = lpVaultRef.getPositionInfo()
                     log("📈 Real LP balance: ".concat(lpBalance.toString()))
+                    log("📊 LP position info retrieved")
                 } else {
                     log("ℹ️ User has no LP position or no public capability")
                 }
 
-                // 4. Get FROTH balance (placeholder for now)
+                // 4. Get REAL FROTH balance from user's FrothToken vault (if they have one)
                 var frothBalance: UFix64 = 0.0
+                if let frothVaultRef = account.capabilities.get<&FrothToken.Vault>(/public/frothTokenVault).borrow() {
+                    frothBalance = frothVaultRef.getBalance()
+                    log("🎉 Real FROTH balance: ".concat(frothBalance.toString()))
+                } else {
+                    log("ℹ️ User has no FROTH vault or no public capability")
+                }
 
                 // Get contract stats
                 let contractStats = Seflow.getContractStats()
@@ -161,6 +191,8 @@ export const useSeflowSalary = (userAddress?: string) => {
                         "lpBalance": lpBalance,
                         "frothBalance": frothBalance
                     },
+                    "savingsInfo": savingsLockInfo,
+                    "lpInfo": lpPositionInfo,
                     "totalValue": flowBalance + savingsBalance + lpBalance,
                     "timestamp": getCurrentBlock().timestamp,
                     "blockHeight": getCurrentBlock().height
@@ -399,24 +431,42 @@ export const useSeflowSalary = (userAddress?: string) => {
     };
 
     const handleCompound = (userAddress: string) => {
-        console.log("🎯 Executing Yield Compound Transaction");
+        console.log("🎯 Executing Real Yield Compound Transaction");
         console.log(`👤 User: ${userAddress}`);
 
         executeCompound({
             cadence: `
-                transaction(userAddress: Address) {
+                import LiquidityPool from 0x7d7f281847222367
+                
+                transaction() {
+                    let lpVaultRef: &LiquidityPool.Vault?
+                    
+                    prepare(signer: auth(BorrowValue) &Account) {
+                        // Get reference to user's LP vault (might not exist)
+                        self.lpVaultRef = signer.storage.borrow<&LiquidityPool.Vault>(from: /storage/userLPVault)
+                    }
+                    
                     execute {
-                        // Mock yield compounding
-                        let yieldAmount = 1.5 // 1% of 150 FLOW
-                        let frothBonus = 0.5
+                        // Check if user has an LP vault
+                        if self.lpVaultRef == nil {
+                            log("❌ No LP vault found - user has no liquidity position")
+                            return
+                        }
                         
-                        log("✅ Yield compounded!")
-                        log("📈 Yield: ".concat(yieldAmount.toString()).concat(" FLOW"))
-                        log("🎉 FROTH Bonus: ".concat(frothBonus.toString()))
+                        // Call the real compound function from LP contract
+                        let yieldAmount = self.lpVaultRef!.compound()
+                        
+                        if yieldAmount > 0.0 {
+                            log("✅ Real yield compounded!")
+                            log("📈 Yield Amount: ".concat(yieldAmount.toString()).concat(" FLOW"))
+                            log("💰 New LP Balance: ".concat(self.lpVaultRef!.getBalance().toString()).concat(" FLOW"))
+                        } else {
+                            log("ℹ️ No yield available to compound")
+                        }
                     }
                 }
             `,
-            args: (arg: unknown, t: unknown) => [(arg as any)(userAddress, (t as any).Address)]
+            args: (arg: unknown, t: unknown) => []
         });
     };
 
@@ -456,13 +506,39 @@ export const useSeflowSalary = (userAddress?: string) => {
             console.log("👤 getUserData - raw data:", data);
             console.log("👤 Query isLoading:", isLoading, "error:", error);
             const result = {
-                flowBalance: data?.userData?.flowBalance || 0.0,
-                savingsBalance: data?.userData?.savingsBalance || 0.0,
-                lpBalance: data?.userData?.lpBalance || 0.0,
-                frothBalance: data?.userData?.frothBalance || 0.0
+                flowBalance: parseFloat(data?.userData?.flowBalance?.toString() || "0.0"),
+                savingsBalance: parseFloat(data?.userData?.savingsBalance?.toString() || "0.0"),
+                lpBalance: parseFloat(data?.userData?.lpBalance?.toString() || "0.0"),
+                frothBalance: parseFloat(data?.userData?.frothBalance?.toString() || "0.0")
             };
             console.log("👤 getUserData - processed result:", result);
             return result;
+        },
+
+        // Get savings vault information
+        getSavingsInfo: () => {
+            const data = stats as SeflowData | undefined;
+            return {
+                balance: parseFloat(data?.savingsInfo?.balance?.toString() || "0.0"),
+                lockTime: parseFloat(data?.savingsInfo?.lockTime?.toString() || "0.0"),
+                unlockTime: parseFloat(data?.savingsInfo?.unlockTime?.toString() || "0.0"),
+                remainingTime: parseFloat(data?.savingsInfo?.remainingTime?.toString() || "0.0"),
+                isLocked: parseFloat(data?.savingsInfo?.isLocked?.toString() || "0.0") === 1.0,
+                remainingDays: Math.ceil(parseFloat(data?.savingsInfo?.remainingTime?.toString() || "0.0") / 86400.0)
+            };
+        },
+
+        // Get LP position information
+        getLPInfo: () => {
+            const data = stats as SeflowData | undefined;
+            return {
+                balance: parseFloat(data?.lpInfo?.balance?.toString() || "0.0"),
+                totalYieldEarned: parseFloat(data?.lpInfo?.totalYieldEarned?.toString() || "0.0"),
+                availableYield: parseFloat(data?.lpInfo?.availableYield?.toString() || "0.0"),
+                lastCompoundTime: parseFloat(data?.lpInfo?.lastCompoundTime?.toString() || "0.0"),
+                weeksSinceLastCompound: parseFloat(data?.lpInfo?.weeksSinceLastCompound?.toString() || "0.0"),
+                canClaimYield: parseFloat(data?.lpInfo?.availableYield?.toString() || "0.0") > 0.0
+            };
         },
 
         // Real blockchain transaction history
@@ -601,12 +677,34 @@ export const useSeflowSalary = (userAddress?: string) => {
                                         log("📈 DEPOSITED ".concat(lpAmount.toString()).concat(" FLOW to LiquidityPool vault"))
                                     }
                                     
+                                    // 3. MINT FROTH REWARDS based on vault usage and amount
+                                    let frothReward = useVault ? totalAmount * 0.015 : totalAmount * 0.01  // 1.5% vs 1% reward
+                                    
+                                    // Check if user has FROTH vault, create if not
+                                    if self.signerAccount.storage.borrow<&FrothToken.Vault>(from: /storage/userFrothVault) == nil {
+                                        // Create new FROTH vault for user
+                                        let newFrothVault <- FrothToken.createEmptyVault()
+                                        self.signerAccount.storage.save(<-newFrothVault, to: /storage/userFrothVault)
+                                        
+                                        // Create public capability so dashboard can read it
+                                        let frothCap = self.signerAccount.capabilities.storage.issue<&FrothToken.Vault>(/storage/userFrothVault)
+                                        self.signerAccount.capabilities.publish(frothCap, at: /public/frothTokenVault)
+                                        
+                                        log("✨ Created new FROTH vault for user")
+                                    }
+                                    
+                                    // Mint FROTH rewards and deposit to user's vault
+                                    if frothReward > 0.0 {
+                                        let rewardTokens <- FrothToken.mintTokens(amount: frothReward)
+                                        let frothVaultRef = self.signerAccount.storage.borrow<&FrothToken.Vault>(from: /storage/userFrothVault)!
+                                        frothVaultRef.deposit(from: <-rewardTokens)
+                                        
+                                        let lockBonus = useVault ? " (Vault Lock Bonus!)" : ""
+                                        log("🎉 MINTED ".concat(frothReward.toString()).concat(" FROTH reward tokens").concat(lockBonus))
+                                    }
+                                    
                                     // Note: Only spending amount remains in the wallet
                                     log("💸 REMAINING ".concat(spendAmount.toString()).concat(" FLOW available for spending in wallet"))
-                                    
-                                    // 3. Calculate FROTH Rewards based on vault usage
-                                    let frothReward = useVault ? 1.5 : 1.0
-                                    log("🎉 Would mint ".concat(frothReward.toString()).concat(" FROTH reward tokens"))
                                     
                                     log("✅ REAL FLOW salary split completed!")
                                     log("💳 Balance After: ".concat(self.flowVault.balance.toString()).concat(" FLOW"))

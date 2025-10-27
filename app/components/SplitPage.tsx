@@ -441,6 +441,70 @@ export default function SplitPage({
           </div>
         </motion.div>
 
+        {/* FROTH Rewards Information */}
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.65 }}
+          className="bg-linear-to-r from-purple-50 to-pink-50 rounded-2xl shadow-lg p-6 mb-8 border border-purple-200"
+        >
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center space-x-4">
+              <div className="w-12 h-12 bg-linear-to-r from-purple-500 to-pink-500 rounded-xl flex items-center justify-center">
+                <Icon icon="cryptocurrency:frax-share" className="text-2xl text-white" />
+              </div>
+              <div>
+                <h3 className="text-lg font-medium text-gray-900 flex items-center space-x-2">
+                  <span>FROTH Rewards</span>
+                  <span className="text-sm bg-purple-100 text-purple-600 px-2 py-1 rounded-full">
+                    NEW
+                  </span>
+                </h3>
+                <p className="text-sm text-gray-600">
+                  Earn FROTH tokens for every salary split transaction
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="bg-white/70 rounded-xl p-4 border border-purple-100">
+              <div className="flex items-center space-x-2 mb-2">
+                <Icon icon="material-symbols:lock-open" className="text-purple-500" />
+                <span className="text-sm font-medium text-gray-700">Standard Split</span>
+              </div>
+              <p className="text-lg font-semibold text-purple-600">
+                {(salaryAmount * 0.01).toFixed(2)} FROTH
+              </p>
+              <p className="text-xs text-gray-500">1% of salary amount</p>
+            </div>
+
+            <div className="bg-white/70 rounded-xl p-4 border border-purple-100">
+              <div className="flex items-center space-x-2 mb-2">
+                <Icon icon="material-symbols:lock" className="text-purple-500" />
+                <span className="text-sm font-medium text-gray-700">Vault Locked</span>
+              </div>
+              <p className="text-lg font-semibold text-purple-600">
+                {(salaryAmount * 0.015).toFixed(2)} FROTH
+              </p>
+              <p className="text-xs text-gray-500">1.5% of salary amount</p>
+            </div>
+          </div>
+
+          <div className="mt-4 p-3 bg-white/50 rounded-lg border border-purple-100">
+            <p className="text-sm text-gray-600 flex items-center space-x-2">
+              <Icon icon="material-symbols:info" className="text-purple-500" />
+              <span>
+                You will earn{" "}
+                <strong className="text-purple-600">
+                  {(salaryAmount * (isLockVault ? 0.015 : 0.01)).toFixed(2)} FROTH
+                </strong>{" "}
+                for this transaction
+              </span>
+            </p>
+          </div>
+        </motion.div>
+
         {/* Summary */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
