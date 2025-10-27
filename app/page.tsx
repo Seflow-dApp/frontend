@@ -7,6 +7,7 @@ import SplitPage from "@/app/components/SplitPage";
 import DashboardPage from "@/app/components/DashboardPage";
 import AboutPage from "@/app/components/AboutPage";
 import LoginPrompt from "@/app/components/LoginPrompt";
+import Footer from "@/app/components/Footer";
 import { useAuth } from "@/app/contexts/AuthContext";
 
 type ActiveTab = "home" | "split" | "dashboard" | "about";
@@ -66,7 +67,8 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-white">
       <Navbar activeTab={activeTab} onTabChange={handleTabChange} />
-      {renderContent()}
+      <div className="flex-1">{renderContent()}</div>
+      <Footer />
     </div>
   );
 }

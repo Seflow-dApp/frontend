@@ -208,6 +208,108 @@ export default function HeroSection({ onGetStarted }: HeroSectionProps) {
               </span>
             </div>
           </motion.div>
+
+          {/* Stats Section */}
+          <motion.div
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 1.2 }}
+            className="mt-20 bg-gray-50 rounded-3xl p-8 md:p-12"
+          >
+            <div className="text-center mb-12">
+              <h2 className="text-3xl md:text-4xl font-light text-gray-900 mb-4">
+                Trusted by Thousands
+              </h2>
+              <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+                Join the growing community of Indonesian professionals building wealth automatically
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+              {[
+                { value: "15%", label: "Average Annual Yield" },
+                { value: "10K+", label: "Active Users" },
+                { value: "$2M+", label: "Total Value Locked" },
+                { value: "99.9%", label: "Uptime" },
+              ].map((stat, index) => (
+                <div key={stat.label} className="text-center">
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ duration: 0.6, delay: 1.4 + index * 0.1 }}
+                    className="text-3xl md:text-4xl font-light text-[#22C55E] mb-2"
+                  >
+                    {stat.value}
+                  </motion.div>
+                  <p className="text-sm md:text-base text-gray-600 font-medium">{stat.label}</p>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+
+          {/* Key Features */}
+          <motion.div
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 1.6 }}
+            className="mt-20"
+          >
+            <div className="text-center mb-12">
+              <h2 className="text-3xl md:text-4xl font-light text-gray-900 mb-4">
+                Why Choose Seflow?
+              </h2>
+              <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+                Built specifically for young Indonesian professionals who want to grow wealth
+                effortlessly
+              </p>
+            </div>
+
+            <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+              {[
+                {
+                  icon: "material-symbols:flash-on",
+                  title: "2-Minute Setup",
+                  description:
+                    "Get started with automated salary splitting in under 2 minutes. No complex configurations required.",
+                  color: "text-yellow-500",
+                  bg: "bg-yellow-50",
+                },
+                {
+                  icon: "mdi:chart-line",
+                  title: "Smart DeFi Yields",
+                  description:
+                    "Automatically invest in the best-performing DeFi protocols with risk management.",
+                  color: "text-blue-500",
+                  bg: "bg-blue-50",
+                },
+                {
+                  icon: "material-symbols:savings",
+                  title: "Automated Savings",
+                  description:
+                    "Never forget to save again. Your salary is automatically split according to your preferences.",
+                  color: "text-[#22C55E]",
+                  bg: "bg-green-50",
+                },
+              ].map((feature, index) => (
+                <motion.div
+                  key={feature.title}
+                  initial={{ opacity: 0, y: 30 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, delay: 1.8 + index * 0.1 }}
+                  whileHover={{ y: -5, boxShadow: "0 20px 40px -10px rgba(0,0,0,0.1)" }}
+                  className="bg-white border border-gray-100 rounded-2xl p-6 hover:shadow-xl transition-all duration-300"
+                >
+                  <div
+                    className={`mx-auto w-14 h-14 ${feature.bg} rounded-xl flex items-center justify-center mb-4`}
+                  >
+                    <Icon icon={feature.icon} className={`text-2xl ${feature.color}`} />
+                  </div>
+                  <h3 className="text-xl font-medium text-gray-900 mb-3">{feature.title}</h3>
+                  <p className="text-gray-600 leading-relaxed">{feature.description}</p>
+                </motion.div>
+              ))}
+            </div>
+          </motion.div>
         </div>
       </div>
     </div>

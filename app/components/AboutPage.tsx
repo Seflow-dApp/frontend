@@ -60,27 +60,6 @@ export default function AboutPage() {
     { value: "99.9%", label: "Uptime" },
   ];
 
-  const team = [
-    {
-      name: "Andi Wijaya",
-      role: "CEO & Co-founder",
-      bio: "Former Goldman Sachs analyst with 8+ years in fintech",
-      avatar: "https://i.pravatar.cc/400?u=andi",
-    },
-    {
-      name: "Sari Putri",
-      role: "CTO & Co-founder",
-      bio: "Ex-Gojek engineer, blockchain security expert",
-      avatar: "https://i.pravatar.cc/400?u=sari",
-    },
-    {
-      name: "Budi Santoso",
-      role: "Head of Product",
-      bio: "Former Tokopedia PM, UX design specialist",
-      avatar: "https://i.pravatar.cc/400?u=budi",
-    },
-  ];
-
   return (
     <div className="min-h-screen pt-16 bg-white">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
