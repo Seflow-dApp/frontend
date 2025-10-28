@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { Icon } from "@iconify/react";
 import { useSeflowSalary } from "@/app/hooks/useSeflowContract";
 import { useAutoCompound } from "@/app/lib/hooks/useAutoCompound";
@@ -75,6 +75,7 @@ export default function DashboardPage({}: DashboardPageProps) {
     }, 30000); // 30 seconds
 
     return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Remove refreshData from dependencies to prevent restarts
 
   // Handle compound transaction success
@@ -97,6 +98,7 @@ export default function DashboardPage({}: DashboardPageProps) {
         setRecentlyClaimedYield(false);
       }, 30000); // Extended to 30 seconds
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [compoundTxId, compoundPending, connectedAddress]);
 
   // Handle auto-compound transaction success
@@ -574,7 +576,7 @@ export default function DashboardPage({}: DashboardPageProps) {
                 <div>
                   <h2 className="text-2xl font-medium text-gray-900">Auto-Compound Scheduler</h2>
                   <p className="text-gray-600">
-                    Schedule automatic yield compounding using Flow's innovative scheduled
+                    Schedule automatic yield compounding using Flow&apos;s innovative scheduled
                     transactions
                   </p>
                 </div>
@@ -786,7 +788,7 @@ export default function DashboardPage({}: DashboardPageProps) {
                     Powered by Flow Scheduled Transactions (Experimental)
                   </p>
                   <p className="text-blue-700">
-                    This feature uses Flow's cutting-edge scheduled transaction system to
+                    This feature uses Flow&apos;s cutting-edge scheduled transaction system to
                     automatically execute yield compounding on the blockchain without requiring
                     external services or manual intervention.
                   </p>

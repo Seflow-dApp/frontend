@@ -480,7 +480,7 @@ export const useSeflowSalary = (userAddress?: string) => {
                     }
                 }
             `,
-            args: (arg: unknown, t: unknown) => [],
+            args: (_arg: unknown, _t: unknown) => [],
             proposer: fcl.currentUser,
             payer: fcl.currentUser,
             authorizations: [fcl.currentUser.authorization as any],
