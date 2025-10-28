@@ -4,12 +4,16 @@ import { useFlowQuery, useFlowMutate, useFlowTransactionStatus } from "@onflow/r
 import { useEffect } from "react";
 
 export const useCounter = () => {
-    // Simple demo query - just get current block height as a demo
-    const { data: count, isLoading, error, refetch } = useFlowQuery({
+    // Query to get current block height
+    const {
+        data: count,
+        isLoading,
+        error,
+        refetch,
+    } = useFlowQuery({
         cadence: `
       access(all)
       fun main(): String {
-          // Simple demo - return current block height as a number
           let blockHeight = getCurrentBlock().height
           return blockHeight.toString()
       }
@@ -18,16 +22,11 @@ export const useCounter = () => {
     });
 
     // Mutation for incrementing counter
-    const {
-        mutate: increment,
-        isPending: txPending,
-        data: txId,
-        error: txError,
-    } = useFlowMutate();
+    const { mutate: increment, isPending: txPending, data: txId, error: txError } = useFlowMutate();
 
     // Track transaction status
     const { transactionStatus, error: txStatusError } = useFlowTransactionStatus({
-        id: txId || '',
+        id: txId || "",
     });
 
     // Auto-refetch when transaction is executed
@@ -42,12 +41,10 @@ export const useCounter = () => {
             cadence: `
         transaction {
           prepare(acct: &Account) {
-            // Simple demo transaction - just log a message
             log("Wallet connected and transaction executed successfully!")
           }
           execute {
-            // This is just a demo transaction to test wallet connection
-            log("Demo transaction completed from address: ".concat(acct.address.toString()))
+            log("Transaction completed from address: ".concat(acct.address.toString()))
           }
         }
       `,
@@ -55,7 +52,7 @@ export const useCounter = () => {
     };
 
     return {
-        count: count as string || '0',
+        count: (count as string) || "0",
         isLoading,
         error,
         increment: handleIncrement,

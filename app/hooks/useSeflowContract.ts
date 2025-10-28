@@ -44,10 +44,10 @@ interface SeflowData {
 
 interface TransactionHistory {
     id: string;
-    type: 'salary_split' | 'compound' | 'transfer';
+    type: "salary_split" | "compound" | "transfer";
     amount: number;
     details: string;
-    status: 'pending' | 'success' | 'failed';
+    status: "pending" | "success" | "failed";
     timestamp: string;
     txId?: string;
 }
@@ -78,16 +78,15 @@ export const useSeflowSalary = (userAddress?: string) => {
     const fetchBlockchainTransactions = async (address?: string) => {
         if (!address) return;
 
-        console.log("🔍 Fetching real blockchain transactions for:", address);
         setFetchingTxHistory(true);
 
         try {
             // Use our internal API route that handles FindLabs JWT + fallback
             const response = await fetch(`/api/transactions/${address}`, {
-                method: 'GET',
+                method: "GET",
                 headers: {
-                    'Accept': 'application/json',
-                }
+                    Accept: "application/json",
+                },
             });
 
             if (!response.ok) {
@@ -95,17 +94,14 @@ export const useSeflowSalary = (userAddress?: string) => {
             }
 
             const apiResponse = await response.json();
-            console.log("📄 API Response:", apiResponse);
 
             if (!apiResponse.success) {
-                throw new Error(apiResponse.details || 'API request failed');
+                throw new Error(apiResponse.details || "API request failed");
             }
 
             const transactions = apiResponse.data || [];
-            console.log(`✅ Received ${transactions.length} transactions from ${apiResponse.meta?.source || 'unknown'} source`);
 
             setTransactionHistory(transactions);
-
         } catch (error) {
             console.error("❌ Error fetching blockchain transactions:", error);
             // Fallback to empty array on error
@@ -123,7 +119,12 @@ export const useSeflowSalary = (userAddress?: string) => {
     }, [activeUserAddress]);
 
     // Query real contract data from deployed Seflow contracts
-    const { data: stats, isLoading, error, refetch } = useFlowQuery({
+    const {
+        data: stats,
+        isLoading,
+        error,
+        refetch,
+    } = useFlowQuery({
         cadence: `
             // Read REAL on-chain balances from deployed contracts
             import FungibleToken from 0x9a0766d93b6608b7
@@ -205,7 +206,9 @@ export const useSeflowSalary = (userAddress?: string) => {
             }
         `,
         args: (arg: unknown, t: unknown) => [
-            activeUserAddress ? (arg as any)(activeUserAddress, (t as any).Address) : (arg as any)(null, (t as any).Optional((t as any).Address))
+            activeUserAddress
+                ? (arg as any)(activeUserAddress, (t as any).Address)
+                : (arg as any)(null, (t as any).Optional((t as any).Address)),
         ],
     });
 
@@ -224,17 +227,16 @@ export const useSeflowSalary = (userAddress?: string) => {
     } | null>(null);
 
     // Create a separate mutation instance for setSplitConfig with proper callbacks
-    const {
-        mutate: executeSplitConfigMutation,
-        isPending: splitConfigPending,
-    } = useFlowMutate({
+    const { mutate: executeSplitConfigMutation, isPending: splitConfigPending } = useFlowMutate({
         mutation: {
             onSuccess: (txId: string) => {
                 console.log("✅ setSplitConfig transaction successful with ID:", txId);
 
                 // Refetch data and transaction history after successful transaction
                 setTimeout(() => {
-                    console.log("🔄 Refreshing balance data and transaction history after successful transaction...");
+                    console.log(
+                        "🔄 Refreshing balance data and transaction history after successful transaction..."
+                    );
                     refetch();
                     if (activeUserAddress) {
                         fetchBlockchainTransactions(activeUserAddress);
@@ -251,11 +253,12 @@ export const useSeflowSalary = (userAddress?: string) => {
                 console.error("❌ setSplitConfig transaction failed:", error);
 
                 // Check if this is a user cancellation vs actual error
-                if (error?.message && (
-                    error.message.includes("Signatures Declined") ||
-                    error.message.includes("User rejected") ||
-                    error.message.includes("Declined:")
-                )) {
+                if (
+                    error?.message &&
+                    (error.message.includes("Signatures Declined") ||
+                        error.message.includes("User rejected") ||
+                        error.message.includes("Declined:"))
+                ) {
                     console.log("ℹ️ User cancelled transaction - no cooldown applied");
                 } else {
                     console.error("❌ Actual transaction error occurred:", error);
@@ -266,8 +269,8 @@ export const useSeflowSalary = (userAddress?: string) => {
                     splitConfigResolvers.reject(error);
                     setSplitConfigResolvers(null);
                 }
-            }
-        }
+            },
+        },
     });
 
     // Mutation for yield compounding
@@ -285,11 +288,6 @@ export const useSeflowSalary = (userAddress?: string) => {
         spendPercent: number,
         useVault: boolean
     ) => {
-        console.log("🎯 Executing REAL Salary Split Transaction");
-        console.log(`💰 Amount: ${totalAmount} FLOW`);
-        console.log(`📊 Split: ${savePercent}% save, ${lpPercent}% LP, ${spendPercent}% spend`);
-        console.log(`🔒 Vault: ${useVault ? 'Locked' : 'Unlocked'}`);
-
         // Check if user is authenticated first
         if (!currentUser?.loggedIn) {
             throw new Error("Please connect your wallet first");
@@ -430,40 +428,55 @@ export const useSeflowSalary = (userAddress?: string) => {
                 (arg as any)(savePercent.toFixed(1), (t as any).UFix64),
                 (arg as any)(lpPercent.toFixed(1), (t as any).UFix64),
                 (arg as any)(spendPercent.toFixed(1), (t as any).UFix64),
-                (arg as any)(useVault, (t as any).Bool)
+                (arg as any)(useVault, (t as any).Bool),
             ],
             proposer: fcl.currentUser,
             payer: fcl.currentUser,
             authorizations: [fcl.currentUser.authorization as any],
-            limit: 9999
+            limit: 9999,
         });
     };
 
     const handleCompound = (userAddress: string) => {
-        console.log("🎯 Executing Real Yield Compound Transaction");
-        console.log(`👤 User: ${userAddress}`);
-
         // Check if user is authenticated first
         if (!currentUser?.loggedIn) {
             throw new Error("Please connect your wallet first");
+        }
+
+        // Validate that the userAddress matches the connected wallet
+        if (currentUser.addr && currentUser.addr !== userAddress) {
+            throw new Error(
+                `Address mismatch: connected wallet ${currentUser.addr} doesn't match target ${userAddress}`
+            );
         }
 
         executeCompound({
             cadence: `
                 import LiquidityPool from 0x7d7f281847222367
                 
-                transaction() {
+                transaction(targetAddress: Address) {
                     let lpVaultRef: &LiquidityPool.Vault?
+                    let userAddress: Address
                     
                     prepare(signer: auth(BorrowValue) &Account) {
+                        // Store the target address for validation and logging
+                        self.userAddress = targetAddress
+                        
+                        // Validate that signer matches the target address
+                        if signer.address != targetAddress {
+                            panic("Signer address does not match target address for compound operation")
+                        }
+                        
                         // Get reference to user's LP vault (might not exist)
                         self.lpVaultRef = signer.storage.borrow<&LiquidityPool.Vault>(from: /storage/userLPVault)
+                        
+                        log("🎯 Compounding LP yield for user: ".concat(targetAddress.toString()))
                     }
                     
                     execute {
                         // Check if user has an LP vault
                         if self.lpVaultRef == nil {
-                            log("❌ No LP vault found - user has no liquidity position")
+                            log("❌ No LP vault found for ".concat(self.userAddress.toString()).concat(" - user has no liquidity position"))
                             return
                         }
                         
@@ -471,20 +484,20 @@ export const useSeflowSalary = (userAddress?: string) => {
                         let yieldAmount = self.lpVaultRef!.compound()
                         
                         if yieldAmount > 0.0 {
-                            log("✅ Real yield compounded!")
+                            log("✅ Real yield compounded for user: ".concat(self.userAddress.toString()))
                             log("📈 Yield Amount: ".concat(yieldAmount.toString()).concat(" FLOW"))
                             log("💰 New LP Balance: ".concat(self.lpVaultRef!.getBalance().toString()).concat(" FLOW"))
                         } else {
-                            log("ℹ️ No yield available to compound")
+                            log("ℹ️ No yield available to compound for user: ".concat(self.userAddress.toString()))
                         }
                     }
                 }
             `,
-            args: (_arg: unknown, _t: unknown) => [],
+            args: (arg: unknown, t: unknown) => [(arg as any)(userAddress, (t as any).Address)],
             proposer: fcl.currentUser,
             payer: fcl.currentUser,
             authorizations: [fcl.currentUser.authorization as any],
-            limit: 9999
+            limit: 9999,
         });
     };
 
@@ -510,26 +523,24 @@ export const useSeflowSalary = (userAddress?: string) => {
         // Getters for contract data
         getContractStats: () => {
             const data = stats as SeflowData | undefined;
-            console.log("📊 getContractStats - raw data:", data);
-            console.log("📊 Query isLoading:", isLoading, "error:", error);
+
             return {
                 totalUsers: data?.contractStats?.totalUsers || 0,
                 totalSplits: data?.contractStats?.totalSplits || 0,
-                totalVolumeProcessed: data?.contractStats?.totalVolumeProcessed || 0.0
+                totalVolumeProcessed: data?.contractStats?.totalVolumeProcessed || 0.0,
             };
         },
 
         getUserData: () => {
             const data = stats as SeflowData | undefined;
-            console.log("👤 getUserData - raw data:", data);
-            console.log("👤 Query isLoading:", isLoading, "error:", error);
+
             const result = {
                 flowBalance: parseFloat(data?.userData?.flowBalance?.toString() || "0.0"),
                 savingsBalance: parseFloat(data?.userData?.savingsBalance?.toString() || "0.0"),
                 lpBalance: parseFloat(data?.userData?.lpBalance?.toString() || "0.0"),
-                frothBalance: parseFloat(data?.userData?.frothBalance?.toString() || "0.0")
+                frothBalance: parseFloat(data?.userData?.frothBalance?.toString() || "0.0"),
             };
-            console.log("👤 getUserData - processed result:", result);
+
             return result;
         },
 
@@ -542,7 +553,9 @@ export const useSeflowSalary = (userAddress?: string) => {
                 unlockTime: parseFloat(data?.savingsInfo?.unlockTime?.toString() || "0.0"),
                 remainingTime: parseFloat(data?.savingsInfo?.remainingTime?.toString() || "0.0"),
                 isLocked: parseFloat(data?.savingsInfo?.isLocked?.toString() || "0.0") === 1.0,
-                remainingDays: Math.ceil(parseFloat(data?.savingsInfo?.remainingTime?.toString() || "0.0") / 86400.0)
+                remainingDays: Math.ceil(
+                    parseFloat(data?.savingsInfo?.remainingTime?.toString() || "0.0") / 86400.0
+                ),
             };
         },
 
@@ -554,8 +567,10 @@ export const useSeflowSalary = (userAddress?: string) => {
                 totalYieldEarned: parseFloat(data?.lpInfo?.totalYieldEarned?.toString() || "0.0"),
                 availableYield: parseFloat(data?.lpInfo?.availableYield?.toString() || "0.0"),
                 lastCompoundTime: parseFloat(data?.lpInfo?.lastCompoundTime?.toString() || "0.0"),
-                weeksSinceLastCompound: parseFloat(data?.lpInfo?.weeksSinceLastCompound?.toString() || "0.0"),
-                canClaimYield: parseFloat(data?.lpInfo?.availableYield?.toString() || "0.0") > 0.0
+                weeksSinceLastCompound: parseFloat(
+                    data?.lpInfo?.weeksSinceLastCompound?.toString() || "0.0"
+                ),
+                canClaimYield: parseFloat(data?.lpInfo?.availableYield?.toString() || "0.0") > 0.0,
             };
         },
 
@@ -568,10 +583,13 @@ export const useSeflowSalary = (userAddress?: string) => {
         connectedAddress: activeUserAddress,
 
         // Real contract functions
-        setSplitConfig: async (amount: number, save: number, lp: number, spend: number, vault: boolean = false) => {
-            console.log("🎯 Executing Salary Split with real FLOW token transactions");
-            console.log(`💰 Amount: ${amount} FLOW, 💾 Save: ${save}%, 📈 LP: ${lp}%, 💳 Spend: ${spend}%`);
-
+        setSplitConfig: async (
+            amount: number,
+            save: number,
+            lp: number,
+            spend: number,
+            vault: boolean = false
+        ) => {
             return new Promise<string>((resolve, reject) => {
                 // Store the promise resolvers so the mutation callbacks can access them
                 setSplitConfigResolvers({ resolve, reject });
@@ -739,12 +757,12 @@ export const useSeflowSalary = (userAddress?: string) => {
                             (arg as any)(save.toFixed(1), (t as any).UFix64),
                             (arg as any)(lp.toFixed(1), (t as any).UFix64),
                             (arg as any)(spend.toFixed(1), (t as any).UFix64),
-                            (arg as any)(vault, (t as any).Bool)
+                            (arg as any)(vault, (t as any).Bool),
                         ],
                         proposer: fcl.currentUser,
                         payer: fcl.currentUser,
                         authorizations: [fcl.currentUser.authorization as any],
-                        limit: 9999
+                        limit: 9999,
                     });
                 } catch (error) {
                     console.error("❌ Error setting up transaction in setSplitConfig:", error);
@@ -774,6 +792,6 @@ export const useSeflowSalary = (userAddress?: string) => {
         })(),
 
         // For configuration tracking
-        configPending: splitConfigPending
+        configPending: splitConfigPending,
     };
 };

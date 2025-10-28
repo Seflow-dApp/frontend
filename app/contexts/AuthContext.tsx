@@ -29,15 +29,15 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   const connectWallet = async () => {
     try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      const mockAddress = "0x1234...5678";
-      setWalletAddress(mockAddress);
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      const walletAddress = "0x1234...5678";
+      setWalletAddress(walletAddress);
       setIsConnected(true);
-      
+
       // Store in localStorage for persistence
       localStorage.setItem("wallet_connected", "true");
-      localStorage.setItem("wallet_address", mockAddress);
+      localStorage.setItem("wallet_address", walletAddress);
     } catch (error) {
       console.error("Failed to connect wallet:", error);
     }

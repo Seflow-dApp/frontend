@@ -59,9 +59,7 @@ export const FlowAuthProvider = ({ children }: FlowAuthProviderProps) => {
 
   const connectWallet = async () => {
     try {
-      console.log("Attempting to authenticate with enhanced auth utils...");
       const result = await authenticateWithFlow();
-      console.log("Authentication successful:", result);
       setLocalUser(result);
     } catch (error) {
       console.error("🔐 Authentication failed:", error);

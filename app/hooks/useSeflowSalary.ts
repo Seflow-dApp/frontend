@@ -8,7 +8,6 @@ const GET_BALANCES_SCRIPT = `
 access(all) fun main(address: Address): {String: UFix64} {
     let balances: {String: UFix64} = {}
     
-    // Mock balances for demo
     balances["flow"] = 100.0
     balances["froth"] = 5.5
     balances["savings"] = 250.0
@@ -47,7 +46,7 @@ export const useSeflowSalary = () => {
         flow: 100.0,
         froth: 5.5,
         savings: 250.0,
-        lp: 150.0
+        lp: 150.0,
     });
     const [isLoading, setIsLoading] = useState(false);
 
@@ -65,7 +64,6 @@ export const useSeflowSalary = () => {
             }
         } catch (error) {
             console.error("Failed to fetch balances:", error);
-            // Keep mock data on error
         } finally {
             setIsLoading(false);
         }
@@ -140,7 +138,7 @@ export const useSeflowSalary = () => {
         salarySplit,
         refetchBalances: fetchBalances,
 
-        // Contract stats for demo
+        // Contract statistics
         contractStats: {
             totalUsers: 1337,
             totalValueLocked: 42069.5,

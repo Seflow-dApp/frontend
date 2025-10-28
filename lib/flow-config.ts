@@ -12,13 +12,13 @@ export const initializeFlowTestnet = () => {
         // Direct service configuration for Blocto (bypasses discovery CORS issues)
         "discovery.wallet": "https://fcl-discovery.onflow.org/testnet/authn",
         "0x9d2e44203cb13051": {
-            "f_type": "Service",
-            "f_vsn": "1.0.0",
-            "type": "authn",
-            "method": "IFRAME/RPC",
-            "endpoint": "https://wallet.blocto.app/api/flow/authn",
-            "uid": "blocto",
-            "id": "0x9d2e44203cb13051#blocto"
+            f_type: "Service",
+            f_vsn: "1.0.0",
+            type: "authn",
+            method: "IFRAME/RPC",
+            endpoint: "https://wallet.blocto.app/api/flow/authn",
+            uid: "blocto",
+            id: "0x9d2e44203cb13051#blocto",
         },
 
         // Additional configuration for better error handling
@@ -49,5 +49,4 @@ export const initializeFlowTestnet = () => {
     };
 
     fcl.config(config);
-    console.log("✅ FCL configured for testnet with enhanced compatibility");
 };

@@ -59,18 +59,9 @@ export default function DashboardPage({}: DashboardPageProps) {
   const savingsInfo = getSavingsInfo();
   const lpInfo = getLPInfo();
 
-  // Debug logging
-  console.log("🎯 Dashboard - contractLoading:", contractLoading);
-  console.log("🎯 Dashboard - contractError:", contractError);
-  console.log("🎯 Dashboard - realUserData:", realUserData);
-  console.log("🎯 Dashboard - savingsInfo:", savingsInfo);
-  console.log("🎯 Dashboard - lpInfo:", lpInfo);
-  console.log("🎯 Dashboard - connectedAddress:", connectedAddress);
-
   // Auto-refresh data every 30 seconds for live updates
   useEffect(() => {
     const interval = setInterval(() => {
-      console.log("🔄 Auto-refreshing dashboard data...");
       refreshData();
     }, 30000); // 30 seconds
 
