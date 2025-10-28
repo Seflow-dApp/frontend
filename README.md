@@ -45,7 +45,7 @@ This project is submitted to the **Forte Hacks by Flow: Build with Disney, Dune 
 
 ## 🌐 Live Demo
 
-**Website**: [https://seflow-dapp.vercel.app](https://seflow-dapp.vercel.app)
+**Website**: [https://seflow.vercel.app](https://seflow.vercel.app)
 
 **Repository**: [https://github.com/Seflow-dApp/frontend](https://github.com/Seflow-dApp/frontend)
 
