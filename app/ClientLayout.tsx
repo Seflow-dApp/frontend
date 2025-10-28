@@ -18,9 +18,9 @@ export default function ClientLayout({ children }: ClientLayoutProps) {
           accessNodeUrl: "https://rest-testnet.onflow.org",
           flowNetwork: "testnet",
           appDetailTitle: "Seflow",
-          appDetailIcon: "http://localhost:3000/logo.png",
+          appDetailIcon: "https://seflow.vercel.app/logo.png",
           appDetailDescription: "Web3 Salary Management and DeFi Investment Made Simple",
-          appDetailUrl: "http://localhost:3000",
+          appDetailUrl: "https://seflow.vercel.app",
         }}
         flowJson={flowJson}
       >

@@ -5,9 +5,9 @@ export const initializeFlowTestnet = () => {
         "accessNode.api": "https://rest-testnet.onflow.org",
         "flow.network": "testnet",
         "app.detail.title": "Seflow",
-        "app.detail.icon": "http://localhost:3000/logo.png",
+        "app.detail.icon": "https://seflow.vercel.app/logo.png",
         "app.detail.description": "Web3 Salary Management and DeFi Investment Made Simple",
-        "app.detail.url": "http://localhost:3000",
+        "app.detail.url": "https://seflow.vercel.app",
 
         // Direct service configuration for Blocto (bypasses discovery CORS issues)
         "discovery.wallet": "https://fcl-discovery.onflow.org/testnet/authn",
