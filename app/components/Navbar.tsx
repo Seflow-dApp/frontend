@@ -87,7 +87,7 @@ export default function Navbar() {
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={connectWallet}
-              className="hidden md:flex items-center space-x-2 bg-[#0F766E] hover:bg-[#0d5a52] text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 shadow-md cursor-pointer"
+              className="hidden md:flex items-center space-x-2 bg-[#22C55E] hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 shadow-md cursor-pointer"
             >
               <Icon icon="material-symbols:wallet" className="text-lg" />
               <span data-editor-id="app/components/Navbar.tsx:66:12">Connect Wallet</span>

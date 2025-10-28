@@ -82,6 +82,12 @@ export const useSeflowSalary = () => {
         try {
             setIsLoading(true);
 
+            // Check if user is authenticated
+            const currentUser = await fcl.currentUser.snapshot();
+            if (!currentUser || !currentUser.loggedIn) {
+                throw new Error("Please connect your wallet first");
+            }
+
             const transactionId = await fcl.mutate({
                 cadence: SALARY_SPLIT_TRANSACTION,
                 args: (arg: unknown, t: unknown) => [
@@ -93,7 +99,7 @@ export const useSeflowSalary = () => {
                 ],
                 proposer: fcl.currentUser,
                 payer: fcl.currentUser,
-                authorizations: [fcl.currentUser],
+                authorizations: [fcl.currentUser.authorization as any],
                 limit: 9999,
             });
 

@@ -290,6 +290,11 @@ export const useSeflowSalary = (userAddress?: string) => {
         console.log(`📊 Split: ${savePercent}% save, ${lpPercent}% LP, ${spendPercent}% spend`);
         console.log(`🔒 Vault: ${useVault ? 'Locked' : 'Unlocked'}`);
 
+        // Check if user is authenticated first
+        if (!currentUser?.loggedIn) {
+            throw new Error("Please connect your wallet first");
+        }
+
         // Use real deployed contract transaction
         executeSalarySplit({
             cadence: `
@@ -426,13 +431,22 @@ export const useSeflowSalary = (userAddress?: string) => {
                 (arg as any)(lpPercent.toFixed(1), (t as any).UFix64),
                 (arg as any)(spendPercent.toFixed(1), (t as any).UFix64),
                 (arg as any)(useVault, (t as any).Bool)
-            ]
+            ],
+            proposer: fcl.currentUser,
+            payer: fcl.currentUser,
+            authorizations: [fcl.currentUser.authorization as any],
+            limit: 9999
         });
     };
 
     const handleCompound = (userAddress: string) => {
         console.log("🎯 Executing Real Yield Compound Transaction");
         console.log(`👤 User: ${userAddress}`);
+
+        // Check if user is authenticated first
+        if (!currentUser?.loggedIn) {
+            throw new Error("Please connect your wallet first");
+        }
 
         executeCompound({
             cadence: `
@@ -466,7 +480,11 @@ export const useSeflowSalary = (userAddress?: string) => {
                     }
                 }
             `,
-            args: (arg: unknown, t: unknown) => []
+            args: (arg: unknown, t: unknown) => [],
+            proposer: fcl.currentUser,
+            payer: fcl.currentUser,
+            authorizations: [fcl.currentUser.authorization as any],
+            limit: 9999
         });
     };
 
@@ -559,6 +577,11 @@ export const useSeflowSalary = (userAddress?: string) => {
                 setSplitConfigResolvers({ resolve, reject });
 
                 try {
+                    // Check if user is authenticated first
+                    if (!currentUser?.loggedIn) {
+                        throw new Error("Please connect your wallet first");
+                    }
+
                     // Execute the transaction using the configured mutation
                     executeSplitConfigMutation({
                         cadence: `
@@ -717,7 +740,11 @@ export const useSeflowSalary = (userAddress?: string) => {
                             (arg as any)(lp.toFixed(1), (t as any).UFix64),
                             (arg as any)(spend.toFixed(1), (t as any).UFix64),
                             (arg as any)(vault, (t as any).Bool)
-                        ]
+                        ],
+                        proposer: fcl.currentUser,
+                        payer: fcl.currentUser,
+                        authorizations: [fcl.currentUser.authorization as any],
+                        limit: 9999
                     });
                 } catch (error) {
                     console.error("❌ Error setting up transaction in setSplitConfig:", error);

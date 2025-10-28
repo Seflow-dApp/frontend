@@ -18,7 +18,7 @@ export default function ClientLayout({ children }: ClientLayoutProps) {
           accessNodeUrl: "https://rest-testnet.onflow.org",
           flowNetwork: "testnet",
           appDetailTitle: "Seflow",
-          appDetailIcon: "https://seflow.app/icon.png",
+          appDetailIcon: "http://localhost:3000/logo.png",
           appDetailDescription: "Web3 Salary Management and DeFi Investment Made Simple",
           appDetailUrl: "http://localhost:3000",
         }}

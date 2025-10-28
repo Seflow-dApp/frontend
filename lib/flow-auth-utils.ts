@@ -8,6 +8,11 @@ export const authenticateWithFlow = async () => {
         // Clear any existing session first
         await fcl.unauthenticate();
 
+        // Ensure FCL is configured with authz
+        fcl.config({
+            "fcl.authz": fcl.currentUser.authorization
+        });
+
         // Direct service configuration to bypass CORS issues
         const bloctoService = {
             f_type: "Service",
