@@ -1,6 +1,6 @@
 import { Inter } from "next/font/google";
 import "./globals.css";
-import ClientLayout from "./ClientLayout";
+import ClientLayout from "./_shared/ClientLayout";
 
 const primaryFont = Inter({
   weight: ["300", "400", "500", "600", "700"],
@@ -9,7 +9,7 @@ const primaryFont = Inter({
 
 export const metadata = {
   title: "Seflow - Auto-Grow Your Salary",
-  description: "Split, Save, Earn Yields in 2 Minutes - Web3 budgeting for professionals",
+  description: "Split, Save, Earn Yields in 3 Minutes - Web3 budgeting for professionals",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

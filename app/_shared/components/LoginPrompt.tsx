@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import { Icon } from "@iconify/react";
-import { useAuth } from "@/app/contexts/FlowAuthContext";
+import { useAuth } from "@/app/_shared/contexts/FlowAuthContext";
 import { useState } from "react";
 
 export default function LoginPrompt() {
@@ -87,39 +87,6 @@ export default function LoginPrompt() {
                 </motion.div>
               ))}
             </div>
-          </motion.div>
-
-          {/* Connect Button */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.6 }}
-            className="mb-6 flex justify-center"
-          >
-            <motion.button
-              whileHover={{ scale: 1.02, boxShadow: "0 10px 25px -5px rgba(34, 197, 94, 0.4)" }}
-              whileTap={{ scale: 0.98 }}
-              onClick={handleConnect}
-              disabled={isConnecting}
-              className="bg-[#22C55E] hover:bg-green-600 text-white px-8 py-4 rounded-xl font-medium transition-all duration-300 shadow-lg flex items-center justify-center space-x-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isConnecting ? (
-                <>
-                  <motion.div
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                  >
-                    <Icon icon="material-symbols:progress-activity" className="text-xl" />
-                  </motion.div>
-                  <span>Connecting...</span>
-                </>
-              ) : (
-                <>
-                  <Icon icon="material-symbols:wallet" className="text-xl" />
-                  <span>Connect Wallet</span>
-                </>
-              )}
-            </motion.button>
           </motion.div>
 
           {/* Footer */}

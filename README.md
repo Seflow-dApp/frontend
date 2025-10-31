@@ -1,6 +1,6 @@
 # 🌊 Seflow - Smart Salary Splitting DApp
 
-**Split, Save, Earn Yields in 2 Minutes - Web3 budgeting for professionals worldwide**
+**Split, Save, Earn Yields in 3 Minutes - Web3 budgeting for professionals worldwide**
 
 Seflow automates salary management through intelligent Flow blockchain splitting, enabling professionals to seamlessly allocate funds across savings, DeFi investments, and spending with just a few clicks.
 
@@ -124,7 +124,7 @@ Navigate to [http://localhost:3000](http://localhost:3000)
 ## 🌟 Why Seflow?
 
 ### **For Professionals**
-- **Time-Saving**: Automate financial decisions in 2 minutes
+- **Time-Saving**: Automate financial decisions in 3 Minutes
 - **Wealth Building**: Consistent DeFi participation without complexity
 - **Flexibility**: Customize allocations based on financial goals
 - **Transparency**: All operations visible on blockchain

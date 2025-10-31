@@ -9,7 +9,7 @@ export default function AboutPage() {
       icon: "material-symbols:flash-on",
       title: "2-Minute Setup",
       description:
-        "Get started with automated salary splitting in under 2 minutes. No complex configurations required.",
+        "Get started with automated salary splitting in under 3 Minutes. No complex configurations required.",
       color: "text-yellow-500",
       bg: "bg-yellow-50",
     },

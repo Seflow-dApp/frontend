@@ -1,8 +1,8 @@
 "use client";
 
-import Navbar from "@/app/components/Navbar";
-import HeroSection from "@/app/components/HeroSection";
-import Footer from "@/app/components/Footer";
+import Navbar from "@/app/_shared/components/Navbar";
+import HeroSection from "@/app/_shared/components/HeroSection";
+import Footer from "@/app/_shared/components/Footer";
 import { useRouter } from "next/navigation";
 
 export default function HomePage() {

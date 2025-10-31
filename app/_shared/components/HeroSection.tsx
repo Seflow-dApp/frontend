@@ -95,7 +95,7 @@ export default function HeroSection({ onGetStarted }: HeroSectionProps) {
             className="text-xl md:text-2xl text-gray-600 font-light mb-12 max-w-2xl mx-auto"
           >
             <span data-editor-id="app/components/HeroSection.tsx:63:12">
-              Split, Save, Earn Yields in 2 Minutes
+              Split, Save, Earn Yields in 3 Minutes
             </span>
           </motion.p>
 
@@ -269,7 +269,7 @@ export default function HeroSection({ onGetStarted }: HeroSectionProps) {
                   icon: "material-symbols:flash-on",
                   title: "2-Minute Setup",
                   description:
-                    "Get started with automated salary splitting in under 2 minutes. No complex configurations required.",
+                    "Get started with automated salary splitting in under 3 Minutes. No complex configurations required.",
                   color: "text-yellow-500",
                   bg: "bg-yellow-50",
                 },

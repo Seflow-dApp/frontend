@@ -2,9 +2,9 @@
 
 import { CosmicAnalyticsProvider } from "cosmic-analytics";
 import { FlowProvider } from "@onflow/react-sdk";
-import { FlowAuthProvider } from "@/app/contexts/FlowAuthContext";
-import { FlowConfigProvider } from "@/app/components/FlowConfigProvider";
-import flowJson from "../flow.json";
+import { FlowAuthProvider } from "@/app/_shared/contexts/FlowAuthContext";
+import { FlowConfigProvider } from "@/app/_shared/components/FlowConfigProvider";
+import flowJson from "../../flow.json";
 
 interface ClientLayoutProps {
   children: React.ReactNode;

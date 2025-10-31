@@ -1,8 +1,8 @@
 "use client";
 
-import Navbar from "@/app/components/Navbar";
-import AboutPage from "@/app/components/AboutPage";
-import Footer from "@/app/components/Footer";
+import Navbar from "@/app/_shared/components/Navbar";
+import AboutPage from "@/app/_shared/components/AboutPage";
+import Footer from "@/app/_shared/components/Footer";
 
 export default function AboutRoute() {
   return (

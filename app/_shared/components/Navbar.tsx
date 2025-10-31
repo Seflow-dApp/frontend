@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { Icon } from "@iconify/react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState } from "react";
-import { useAuth } from "@/app/contexts/FlowAuthContext";
+import { useAuth } from "@/app/_shared/contexts/FlowAuthContext";
 import { formatWalletAddress } from "@/lib/utils";
 
 export default function Navbar() {

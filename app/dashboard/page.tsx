@@ -1,10 +1,10 @@
 "use client";
 
-import Navbar from "@/app/components/Navbar";
-import DashboardPage from "@/app/components/DashboardPage";
-import LoginPrompt from "@/app/components/LoginPrompt";
-import Footer from "@/app/components/Footer";
-import { useAuth } from "@/app/contexts/FlowAuthContext";
+import Navbar from "@/app/_shared/components/Navbar";
+import DashboardPage from "@/app/_shared/components/DashboardPage";
+import LoginPrompt from "@/app/_shared/components/LoginPrompt";
+import Footer from "@/app/_shared/components/Footer";
+import { useAuth } from "@/app/_shared/contexts/FlowAuthContext";
 
 export default function DashboardRoute() {
   const { isConnected } = useAuth();

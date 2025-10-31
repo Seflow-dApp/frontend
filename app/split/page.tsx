@@ -1,10 +1,10 @@
 "use client";
 
-import Navbar from "@/app/components/Navbar";
-import SplitPage from "@/app/components/SplitPage";
-import LoginPrompt from "@/app/components/LoginPrompt";
-import Footer from "@/app/components/Footer";
-import { useAuth } from "@/app/contexts/FlowAuthContext";
+import Navbar from "@/app/_shared/components/Navbar";
+import SplitPage from "@/app/_shared/components/SplitPage";
+import LoginPrompt from "@/app/_shared/components/LoginPrompt";
+import Footer from "@/app/_shared/components/Footer";
+import { useAuth } from "@/app/_shared/contexts/FlowAuthContext";
 
 export default function SplitRoute() {
   const { isConnected } = useAuth();

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { Icon } from "@iconify/react";
-import { useSeflowSalary } from "@/app/hooks/useSeflowContract";
+import { useSeflowSalary } from "@/app/_shared/hooks/useSeflowContract";
 
 interface SplitPageProps {
   initialData?: {
