@@ -89,6 +89,34 @@ export default function LoginPrompt() {
             </div>
           </motion.div>
 
+          {/* Connect Button */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.6 }}
+            className="mb-10"
+          >
+            <button
+              type="button"
+              onClick={handleConnect}
+              disabled={isConnecting}
+              aria-busy={isConnecting}
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-[#22C55E] text-white font-medium shadow hover:bg-green-600 disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {isConnecting ? (
+                <>
+                  <Icon icon="line-md:loading-twotone-loop" className="text-xl animate-spin" />
+                  Connecting...
+                </>
+              ) : (
+                <>
+                  <Icon icon="mdi:wallet" className="text-xl" />
+                  Connect Wallet
+                </>
+              )}
+            </button>
+          </motion.div>
+
           {/* Footer */}
           <motion.div
             initial={{ opacity: 0 }}
