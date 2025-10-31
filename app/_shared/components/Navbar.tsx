@@ -6,7 +6,7 @@ import { Icon } from "@iconify/react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState } from "react";
 import { useAuth } from "@/app/_shared/contexts/FlowAuthContext";
-import { formatWalletAddress } from "@/lib/utils";
+import { formatWalletAddress } from "@/app/_shared/lib/utils";
 
 export default function Navbar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);

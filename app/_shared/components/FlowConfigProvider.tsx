@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { initializeFlowTestnet } from "@/lib/flow-config";
+import { initializeFlowTestnet } from "@/app/_shared/lib/flow-config";
 
 interface FlowConfigProviderProps {
   children: React.ReactNode;

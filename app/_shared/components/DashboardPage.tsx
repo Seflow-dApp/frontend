@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { useState, useEffect } from "react";
 import { Icon } from "@iconify/react";
 import { useSeflowSalary } from "@/app/_shared/hooks/useSeflowContract";
-import { useAutoCompound } from "@/app/_shared/lib/hooks/useAutoCompound";
+import { useAutoCompound } from "@/app/_shared/hooks/useAutoCompound";
 
 interface DashboardData {
   savings: number;

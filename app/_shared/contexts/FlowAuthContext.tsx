@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { useFlowCurrentUser } from "@onflow/react-sdk";
-import { authenticateWithFlow, logoutFromFlow } from "@/lib/flow-auth-utils";
+import { authenticateWithFlow, logoutFromFlow } from "@/app/_shared/lib/flow-auth-utils";
 import * as fcl from "@onflow/fcl";
 
 // Type for FCL current user

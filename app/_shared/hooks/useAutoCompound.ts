@@ -1,6 +1,6 @@
 import { useState } from "react";
 import * as fcl from "@onflow/fcl";
-import { SETUP_AND_SCHEDULE_AUTO_COMPOUND, SETUP_AUTO_COMPOUND_HANDLER, SCHEDULE_AUTO_COMPOUND, CHECK_AUTO_COMPOUND_STATUS } from "../transactions/autoCompound";
+import { SETUP_AND_SCHEDULE_AUTO_COMPOUND, SETUP_AUTO_COMPOUND_HANDLER, SCHEDULE_AUTO_COMPOUND, CHECK_AUTO_COMPOUND_STATUS } from "@/app/_shared/lib/transactions/autoCompound";
 
 export function useAutoCompound() {
     const [isLoading, setIsLoading] = useState(false);
