@@ -7,7 +7,7 @@ export default function AboutPage() {
   const features = [
     {
       icon: "material-symbols:flash-on",
-      title: "2-Minute Setup",
+      title: "3-Minute Setup",
       description:
         "Get started with automated salary splitting in under 3 Minutes. No complex configurations required.",
       color: "text-yellow-500",
